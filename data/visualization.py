@@ -5,8 +5,6 @@ from matplotlib.patches import Rectangle
 
 from data_loader import DataLoader
 
-# visualizer based off https://www.kaggle.com/eduardo4jesus/stanford-cars-dataset-a-quick-look-up
-
 def get_assets(df, i):
     image = Image.open(df['fname'][i])
     title = df['labels'][i] if 'labels' in df else 'Unclassified'
@@ -25,22 +23,22 @@ def display_image(df, i):
     plt.title(title)
     plt.gca().add_patch(rect)
 
-def display_images(n):
+def display_images(df_train, df_test, n):
 
     fig, ax = plt.subplots(n, 2, figsize=(15, 5*n))
-    train_len = len(data.df_train)
-    test_len = len(data.df_test)
+    train_len = len(df_train)
+    test_len = len(df_test)
 
     for i in range(n):
         
-        im, title, rect = get_assets(data.df_train, random.randint(0, train_len))
+        im, title, rect = get_assets(df_train, random.randint(0, train_len))
         sub = ax[i, 0]
         sub.imshow(im)
         sub.axis('off')
         sub.set_title(title)
         sub.add_patch(rect)
         
-        im, title, rect = get_assets(data.df_test, random.randint(0, test_len))
+        im, title, rect = get_assets(df_test, random.randint(0, test_len))
         sub = ax[i, 1]
         sub.imshow(im)
         sub.axis('off')
@@ -50,6 +48,14 @@ def display_images(n):
     plt.show()
 
 data = DataLoader()
-display_image(data.df_train, 0)
-display_images(5)
+
+data.df_train['label'] = data.df_train['label']-1 
+
+df_train = data.df_train.merge(data.labels, left_on='label', right_index=True)
+df_train = df_train.sort_index()
+
+
+display_image(df_train, 0)
+display_images(df_train, data.df_test, 5)
+
 
