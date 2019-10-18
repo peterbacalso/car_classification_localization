@@ -58,4 +58,5 @@ df_train = df_train.sort_index()
 display_image(df_train, 0)
 display_images(df_train, data.df_test, 5)
 
+print(data.labels)
 

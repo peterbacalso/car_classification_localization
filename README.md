@@ -1,6 +1,6 @@
 # Stanford Cars Dataset Image Recognition
 
-
+![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/data_pipeline.jpg)
 
 ## Dataset Citation
 
