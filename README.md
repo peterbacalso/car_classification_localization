@@ -12,11 +12,11 @@ The data has a class imbalance so one way to handle this is through oversampling
 
 The following is a the distribution of classes
 
-![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/class_imbalance.jpg)
+![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/class_imbalance.png)
 
 The following is an example of the distribution after oversampling. The generator was tested for 300 iterations @ 32 batch size each
 
-![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/oversampled.jpg)
+![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/oversampled.png)
 
 ## Dataset Citation
 
