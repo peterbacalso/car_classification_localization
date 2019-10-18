@@ -1,4 +1,10 @@
-# Stanford Cars Dataset Image Recognition
+# Stanford Cars Dataset Image Classification and Localization
+
+## Methodology
+
+### Model Design
+
+Input Pipeline
 
 ![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/data_pipeline.jpg)
 
