@@ -10,6 +10,14 @@ The data has a class imbalance so one way to handle this is through oversampling
 
 ![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/data_pipeline.jpg)
 
+The following is a the distribution of classes
+
+![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/class_imbalance.jpg)
+
+The following is an example of the distribution after oversampling. The generator was tested for 300 iterations @ 32 batch size each
+
+![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/oversampled.jpg)
+
 ## Dataset Citation
 
 Krause, Jonathan, et al. "3d object representations for fine-grained categorization." Proceedings of the IEEE International Conference on Computer Vision Workshops. 2013.

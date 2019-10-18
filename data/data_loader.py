@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import tensorflow as tf
 
 from pathlib import Path
@@ -11,6 +12,7 @@ pd.set_option('display.width', 1000)
 
 IMG_SIZE = 224
 BATCH_SIZE = 32
+BUFFER_SIZE = 100000
 
 # loader based off 
 # https://www.kaggle.com/eduardo4jesus/stanford-cars-dataset-a-quick-look-up
@@ -48,7 +50,7 @@ class DataLoader():
         self.df_test = df_test
         self.labels = labels
         
-    def get_pipeline(self, apply_aug=True, seed=23, test=False):
+    def get_pipeline(self, apply_aug=True, seed=None, test=False):
         ds = None
         datasets = []
         df = self.df_train if not test else self.df_test
@@ -57,18 +59,20 @@ class DataLoader():
             cars = df[df['label']==car_type]
             paths = cars['fname']
             labels = cars['label']
-            paths_labels_ds = tf.data.Dataset.from_tensor_slices((paths, labels))
-            datasets.append(paths_labels_ds)
+            paths_labels_ds = tf.data.Dataset.from_tensor_slices((paths, labels)).cache()
+            paths_labels_ds = paths_labels_ds.shuffle(BUFFER_SIZE).repeat()
+            img_labels_ds = paths_labels_ds.map(load_and_resize_image, num_parallel_calls=AUTOTUNE)
+            if apply_aug:
+                img_labels_ds = img_labels_ds.map(augment_img)
+            img_labels_ds = img_labels_ds.map(standard_scaler)
+            datasets.append(img_labels_ds)
+            
+        num_labels = len(self.labels)
+        sampling_weights = np.ones(num_labels)*(1./num_labels)
 
-        ds = sample_from_datasets(datasets, seed=seed)
-        ds = ds.cache()
-        ds = ds.apply(
-                tf.data.experimental.shuffle_and_repeat(
-                        buffer_size=df.shape[0], seed=seed))
-        ds = ds.map(load_and_resize_image, num_parallel_calls=AUTOTUNE)
-        if apply_aug:
-            ds = ds.map(augment_img)
-        ds = ds.map(standard_scaler).batch(BATCH_SIZE).prefetch(buffer_size=AUTOTUNE)            
+        ds = sample_from_datasets(datasets, weights=sampling_weights, seed=seed)
+        ds = ds.batch(BATCH_SIZE).prefetch(buffer_size=AUTOTUNE)
+        
         return ds    
 
 # =============================================================================
@@ -91,3 +95,6 @@ def augment_img(img, label):
     img = tf.image.random_brightness(img, .1)
     img = tf.image.random_jpeg_quality(img, 50, 100)
     return img, label
+
+
+
