@@ -10,7 +10,7 @@ The data has a class imbalance so one way to handle this is through oversampling
 
 ![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/data_pipeline.jpg)
 
-The following is a the distribution of classes
+The following is the imbalanced distribution of classes
 
 ![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/class_imbalance.png)
 
