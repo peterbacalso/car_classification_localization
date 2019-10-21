@@ -54,12 +54,6 @@ data.df_train['label'] = data.df_train['label']-1
 df_train = data.df_train.merge(data.labels, left_on='label', right_index=True)
 df_train = df_train.sort_index()
 
-
-
 display_image(df_train, 0)
 display_images(df_train, data.df_test, 5)
-
-# =============================================================================
-# print(data.labels)
-# =============================================================================
 

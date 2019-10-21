@@ -16,9 +16,6 @@ from sklearn.model_selection import train_test_split
 IMG_SIZE = 224
 BUFFER_SIZE = 100000
 
-# loader based off 
-# https://www.kaggle.com/eduardo4jesus/stanford-cars-dataset-a-quick-look-up
-
 class DataLoader():
     
     def __init__(self, train_path='cars_train', 
@@ -88,13 +85,6 @@ class DataLoader():
             labels = cars['label']
             bbox = cars[['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2']]
             paths = tf.data.Dataset.from_tensor_slices(paths)
-# =============================================================================
-#             targets = tf.data.Dataset.zip((labels, bbox)).cache()
-#             paths_targets_ds = tf.data.Dataset.from_tensor_slices((
-#                     paths, 
-#                     tf.cast(targets.values, tf.int32)
-#                     ))
-# =============================================================================
             targets = tf.data.Dataset.from_tensor_slices((
                 tf.cast(labels.values, tf.int32), 
                 tf.cast(bbox.values, tf.int32)

@@ -19,12 +19,6 @@ valid_generator = data.get_pipeline(type='validation')
 validation_steps = tf.math.ceil(len(data.df_valid)/data.batch_size)
 validation_steps = tf.cast(validation_steps, tf.int16).numpy()
         
-# =============================================================================
-# for image, label, center_x, center_y, width, height in train_generator.take(1):
-#     print(image.shape[1:])
-# 
-# =============================================================================
-
 optimizer = SGD(lr=0.01, momentum=0.9, decay=0.01)
 
 DefaultConv2D = partial(Conv2D,
