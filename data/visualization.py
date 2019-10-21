@@ -6,12 +6,12 @@ from matplotlib.patches import Rectangle
 from data_loader import DataLoader
 
 def get_assets(df, i):
-    image = Image.open(df['fname'][i])
-    title = df['labels'][i] if 'labels' in df else 'Unclassified'
+    image = Image.open(df['fname'].iloc[i])
+    title = df['labels'].iloc[i] if 'labels' in df else 'Unclassified'
 
-    xy = df['bbox_x1'][i], df['bbox_y1'][i]
-    width = df['bbox_x2'][i] - df['bbox_x1'][i]
-    height = df['bbox_y2'][i] - df['bbox_y1'][i]
+    xy = df['bbox_x1'].iloc[i], df['bbox_y1'].iloc[i]
+    width = df['bbox_x2'].iloc[i] - df['bbox_x1'].iloc[i]
+    height = df['bbox_y2'].iloc[i] - df['bbox_y1'].iloc[i]
     rect = Rectangle(xy, width, height, fill=False, color='r', linewidth=2)
     
     return (image, title, rect)
@@ -55,8 +55,11 @@ df_train = data.df_train.merge(data.labels, left_on='label', right_index=True)
 df_train = df_train.sort_index()
 
 
+
 display_image(df_train, 0)
 display_images(df_train, data.df_test, 5)
 
-print(data.labels)
+# =============================================================================
+# print(data.labels)
+# =============================================================================
 
