@@ -78,25 +78,35 @@ class DataLoader():
             df = self.df_valid
         elif type == 'test':
             df = self.df_test
-       
-        for car_type in df['label'].unique():
-            cars = df[df['label']==car_type]
-            paths = cars['fname']
-            labels = cars['label']
-            bbox = cars[['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2']]
-            paths = tf.data.Dataset.from_tensor_slices(paths)
-            targets = tf.data.Dataset.from_tensor_slices((
-                tf.cast(labels.values, tf.int32), 
-                tf.cast(bbox.values, tf.int32)
-            ))
-            paths_targets_ds = tf.data.Dataset.zip((paths, targets)).cache()
+            
+        if type == 'test':
+            paths = df['fname']
+            paths_targets_ds = tf.data.Dataset.from_tensor_slices(paths).cache()
             paths_targets_ds = paths_targets_ds.shuffle(BUFFER_SIZE)
             img_targets_ds = paths_targets_ds.map(
-                    load_and_resize_image, num_parallel_calls=AUTOTUNE)
-            if apply_aug:
-                img_targets_ds = img_targets_ds.map(augment_img)
-            img_targets_ds = img_targets_ds.map(standard_scaler).repeat()
-            datasets.append(img_targets_ds)
+                    load_and_resize_image_test, num_parallel_calls=AUTOTUNE)
+            img_targets_ds = img_targets_ds.map(standard_scaler_test).repeat()
+            ds = img_targets_ds.batch(self.batch_size).prefetch(buffer_size=AUTOTUNE)
+            return ds
+        else:
+            for car_type in df['label'].unique():
+                cars = df[df['label']==car_type]
+                paths = cars['fname']
+                labels = cars['label']
+                bbox = cars[['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2']]
+                paths = tf.data.Dataset.from_tensor_slices(paths)
+                targets = tf.data.Dataset.from_tensor_slices((
+                    tf.cast(labels.values, tf.int32), 
+                    tf.cast(bbox.values, tf.int32)
+                ))
+                paths_targets_ds = tf.data.Dataset.zip((paths, targets)).cache()
+                paths_targets_ds = paths_targets_ds.shuffle(BUFFER_SIZE)
+                img_targets_ds = paths_targets_ds.map(
+                        load_and_resize_image, num_parallel_calls=AUTOTUNE)
+                if apply_aug:
+                    img_targets_ds = img_targets_ds.map(augment_img)
+                img_targets_ds = img_targets_ds.map(standard_scaler).repeat()
+                datasets.append(img_targets_ds)
             
         num_labels = len(self.labels)
         sampling_weights = np.ones(num_labels)*(1./num_labels)
@@ -123,10 +133,24 @@ def load_and_resize_image(path, outputs, channels=1):
 
 def augment_img(img, outputs):
     img = tf.image.random_flip_left_right(img)
-    img = tf.image.random_flip_up_down(img)
+    #img = tf.image.random_flip_up_down(img)
     img = tf.image.random_brightness(img, .1)
     img = tf.image.random_jpeg_quality(img, 50, 100)
     return img, outputs
+
+# =============================================================================
+# HELPERS FOR TEST
+# =============================================================================
+
+def standard_scaler_test(img):
+    img = img/255
+    return img
+
+def load_and_resize_image_test(path, channels=1):
+    img = tf.io.read_file(path)
+    img = tf.image.decode_jpeg(img, channels=channels)
+    img = tf.image.resize(img, [IMG_SIZE, IMG_SIZE])
+    return img
 
 
 
