@@ -108,7 +108,7 @@ class DataLoader():
                 img_targets_ds = img_targets_ds.map(standard_scaler).repeat()
                 datasets.append(img_targets_ds)
             
-        num_labels = len(self.labels)
+        num_labels = len(df['label'].unique())
         sampling_weights = np.ones(num_labels)*(1./num_labels)
 
         ds = sample_from_datasets(datasets, 
