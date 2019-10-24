@@ -7,6 +7,7 @@ from scipy.io import loadmat
 from tensorflow.data.experimental import sample_from_datasets, AUTOTUNE
 from sklearn.model_selection import train_test_split
 
+
 # =============================================================================
 # pd.options.display.max_rows = 500
 # pd.options.display.max_columns = 500
@@ -60,7 +61,8 @@ class DataLoader():
         self.labels = labels
         self.batch_size = batch_size
         
-    def get_pipeline(self, type='train', apply_aug=True, seed=None):
+    def get_pipeline(self, type='train', output='label_bbox', apply_aug=True, 
+                     exploration=False, seed=None):
         '''
         Input:
             type: can be 'train', 'validation', or 'test'
@@ -89,16 +91,24 @@ class DataLoader():
             ds = img_targets_ds.batch(self.batch_size).prefetch(buffer_size=AUTOTUNE)
             return ds
         else:
+            one_hot_df_labels = pd.get_dummies(df['label'], prefix=['label'])
             for car_type in df['label'].unique():
                 cars = df[df['label']==car_type]
                 paths = cars['fname']
-                labels = cars['label']
+                labels = cars['label'] if exploration else one_hot_df_labels[df['label']==car_type]
                 bbox = cars[['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2']]
                 paths = tf.data.Dataset.from_tensor_slices(paths)
-                targets = tf.data.Dataset.from_tensor_slices((
-                    tf.cast(labels.values, tf.int32), 
-                    tf.cast(bbox.values, tf.int32)
-                ))
+                if output=='label_bbox':
+                    targets = tf.data.Dataset.from_tensor_slices((
+                        tf.cast(labels.values, tf.int32), 
+                        tf.cast(bbox.values, tf.int32)
+                    ))
+                elif output == 'label':
+                    targets = tf.data.Dataset.from_tensor_slices(
+                            tf.cast(labels.values, tf.int32))
+                elif output == 'bbox':
+                    targets = tf.data.Dataset.from_tensor_slices(
+                        tf.cast(bbox.values, tf.int32))
                 paths_targets_ds = tf.data.Dataset.zip((paths, targets)).cache()
                 paths_targets_ds = paths_targets_ds.shuffle(BUFFER_SIZE)
                 img_targets_ds = paths_targets_ds.map(

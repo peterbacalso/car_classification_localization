@@ -18,11 +18,13 @@ BATCH_SIZE=16
 data = DataLoader('../data/cars_train', '../data/cars_test', '../data/devkit', batch_size=BATCH_SIZE)
 n_classes = len(data.labels)
 
-train_generator = data.get_pipeline(type='train')
+train_gen_clf = data.get_pipeline(type='train', output='label')
+train_gen_clf_localize = data.get_pipeline(type='train')
 steps_per_epoch=tf.math.ceil(len(data.df_train)/data.batch_size)
 tf.cast(steps_per_epoch, tf.int16).numpy()
 
-valid_generator = data.get_pipeline(type='validation')
+valid_gen_clf = data.get_pipeline(type='validation', output='label')
+valid_gen_clf_localize = data.get_pipeline(type='validation')
 validation_steps = tf.math.ceil(len(data.df_valid)/data.batch_size)
 validation_steps = tf.cast(validation_steps, tf.int16).numpy()
         
@@ -60,22 +62,37 @@ drop_2 = Dropout(0.5)(dense_2)
 class_output = Dense(n_classes, activation="softmax")(drop_2)
 bbox_output = Dense(4)(drop_2)
 
-model = Model(inputs=input, outputs=[class_output,bbox_output])
-model.compile(loss=["categorical_crossentropy", "mse"],
-              loss_weights=[.8,.2],
+clf_model = Model(inputs=input, outputs=class_output)
+clf_model.compile(loss="categorical_crossentropy",
               optimizer=optimizer,
               metrics=["accuracy"])
 
-history = model.fit(
-        train_generator,
+history_clf = clf_model.fit(
+        train_gen_clf,
         epochs = 1,
         steps_per_epoch=steps_per_epoch,
-        validation_data=valid_generator,
+        validation_data=valid_gen_clf,
         validation_steps=validation_steps,
         verbose=1)
 
+# =============================================================================
+# clf_localize_model = Model(inputs=input, outputs=[class_output,bbox_output])
+# clf_localize_model.compile(loss=["categorical_crossentropy", "mse"],
+#               loss_weights=[.8,.2],
+#               optimizer=optimizer,
+#               metrics=["accuracy"])
+# 
+# history_clf_localize = clf_localize_model.fit(
+#         train_gen_clf_localize,
+#         epochs = 1,
+#         steps_per_epoch=steps_per_epoch,
+#         validation_data=valid_gen_clf_localize,
+#         validation_steps=validation_steps,
+#         verbose=1)
+# =============================================================================
 
-test_generator = data.get_pipeline(type='test', apply_aug=False)
+test_gen_clf = data.get_pipeline(type='test', output='label', apply_aug=False)
+# test_gen_clf_localize = data.get_pipeline(type='test', apply_aug=False)
 steps=tf.math.ceil(len(data.df_test)/data.batch_size)
 tf.cast(steps, tf.int16).numpy()
 
@@ -92,11 +109,11 @@ def decode_predictions(y_probs, classes, top=3):
     top_cat = vfunc(top_indeces, classes)
     return [top_probs, top_cat]
 
-for images in test_generator.take(1):
+for images in test_gen_clf.take(1):
     test_batch = images.numpy()
-    results = model.predict(test_batch)
+    results = clf_model.predict(test_batch)
     top_k = 3
-    top_k_probs, top_k_labels = decode_predictions(results[0], index_to_label, top=top_k)
+    top_k_probs, top_k_labels = decode_predictions(results, index_to_label, top=top_k)
     plt.figure(figsize=(3,3))
     for i in range(BATCH_SIZE):
         print(f"Image #{i+1}")
@@ -107,6 +124,24 @@ for images in test_generator.take(1):
         for j in range(top_k):
             print("    {:12s} {:.2f}%".format(top_k_labels[i][j], top_k_probs[i][j] * 100))
         print()
+
+# =============================================================================
+# for images in test_gen_clf_localize.take(1):
+#     test_batch = images.numpy()
+#     results = clf_localize_model.predict(test_batch)
+#     top_k = 3
+#     top_k_probs, top_k_labels = decode_predictions(results[0], index_to_label, top=top_k)
+#     plt.figure(figsize=(3,3))
+#     for i in range(BATCH_SIZE):
+#         print(f"Image #{i+1}")
+#         img = test_batch[i]
+#         img.resize(224,224)
+#         plt.imshow(img)
+#         plt.show()
+#         for j in range(top_k):
+#             print("    {:12s} {:.2f}%".format(top_k_labels[i][j], top_k_probs[i][j] * 100))
+#         print()
+# =============================================================================
 # =============================================================================
 # model.evaluate(test_generator, steps=steps)
 # =============================================================================
