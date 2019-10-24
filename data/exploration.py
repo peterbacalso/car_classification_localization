@@ -29,7 +29,7 @@ plt.show()
 # =============================================================================
 
 
-ds = data.get_pipeline(exploration=True)
+ds = data.get_pipeline(onehot=False)
 labels = []
 
 for _, outputs in ds.take(300):

@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 
+from functools import partial
 from pathlib import Path
 from scipy.io import loadmat
 from tensorflow.data.experimental import sample_from_datasets, AUTOTUNE
@@ -61,13 +62,18 @@ class DataLoader():
         self.labels = labels
         self.batch_size = batch_size
         
-    def get_pipeline(self, type='train', output='label_bbox', apply_aug=True, 
-                     exploration=False, seed=None):
+    def get_pipeline(self, type='train', output='label_bbox', channels=1,
+                     apply_aug=True, onehot=True, seed=None):
         '''
         Input:
-            type: can be 'train', 'validation', or 'test'
-            apply_aug: bool that determines whether to apply augmentation
-            seed: random seed number
+            type:           Can be 'train', 'validation', or 'test'
+            output:         Determines the output values of the pipline. 
+                            Can be one of 'label', 'bbox', or 'label_bbox'.
+            channels:       Number of channels of the output image
+            apply_aug:      Bool that determines whether to apply augmentation
+            onehot:         Bool that determines whether to 
+                            one hot encode the class labels
+            seed:           Random seed number
         Output:
             image generator
         '''
@@ -86,7 +92,8 @@ class DataLoader():
             paths_targets_ds = tf.data.Dataset.from_tensor_slices(paths).cache()
             paths_targets_ds = paths_targets_ds.shuffle(BUFFER_SIZE)
             img_targets_ds = paths_targets_ds.map(
-                    load_and_resize_image_test, num_parallel_calls=AUTOTUNE)
+                    partial(load_and_resize_image_test, channels=channels),
+                    num_parallel_calls=AUTOTUNE)
             img_targets_ds = img_targets_ds.map(standard_scaler_test).repeat()
             ds = img_targets_ds.batch(self.batch_size).prefetch(buffer_size=AUTOTUNE)
             return ds
@@ -95,8 +102,8 @@ class DataLoader():
             for car_type in df['label'].unique():
                 cars = df[df['label']==car_type]
                 paths = cars['fname']
-                labels = cars['label'] if exploration else one_hot_df_labels[df['label']==car_type]
-                bbox = cars[['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2']]
+                labels = one_hot_df_labels[df['label']==car_type] if onehot else cars['label']
+                bbox = np.log(cars[['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2']])
                 paths = tf.data.Dataset.from_tensor_slices(paths)
                 if output=='label_bbox':
                     targets = tf.data.Dataset.from_tensor_slices((
@@ -112,7 +119,8 @@ class DataLoader():
                 paths_targets_ds = tf.data.Dataset.zip((paths, targets)).cache()
                 paths_targets_ds = paths_targets_ds.shuffle(BUFFER_SIZE)
                 img_targets_ds = paths_targets_ds.map(
-                        load_and_resize_image, num_parallel_calls=AUTOTUNE)
+                        partial(load_and_resize_image, channels=channels),
+                        num_parallel_calls=AUTOTUNE)
                 if apply_aug:
                     img_targets_ds = img_targets_ds.map(augment_img)
                 img_targets_ds = img_targets_ds.map(standard_scaler).repeat()
