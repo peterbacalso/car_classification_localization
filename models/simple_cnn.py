@@ -4,7 +4,11 @@ import matplotlib.pyplot as plt
 
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Conv2D, Dense, MaxPooling2D, Flatten, Dropout, BatchNormalization
+from tensorflow.keras.layers import (
+    Input, Conv2D, Dense, MaxPooling2D, 
+    Flatten, Dropout, BatchNormalization,
+    Activation
+)
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.backend import clear_session
 from functools import partial
@@ -16,57 +20,70 @@ clear_session()
 BATCH_SIZE=16
 SEED=23
 
-data = DataLoader('../data/cars_train', 
-                  '../data/cars_test', 
-                  '../data/devkit', 
-                  batch_size=BATCH_SIZE)
-n_classes = len(data.labels)
-
-train_gen_clf = data.get_pipeline(type='train', output='label', seed=SEED)
-train_gen_localize = data.get_pipeline(type='train', output='bbox', seed=SEED)
-train_gen_clf_localize = data.get_pipeline(type='train', seed=SEED)
-steps_per_epoch=tf.math.ceil(len(data.df_train)/data.batch_size)
-tf.cast(steps_per_epoch, tf.int16).numpy()
-
-valid_gen_clf = data.get_pipeline(type='validation', output='label', seed=SEED)
-valid_gen_localize = data.get_pipeline(type='train', output='bbox', seed=SEED)
-valid_gen_clf_localize = data.get_pipeline(type='validation', seed=SEED)
-validation_steps = tf.math.ceil(len(data.df_valid)/data.batch_size)
-validation_steps = tf.cast(validation_steps, tf.int16).numpy()
+# =============================================================================
+# data = DataLoader('../data/cars_train', 
+#                   '../data/cars_test', 
+#                   '../data/devkit', 
+#                   batch_size=BATCH_SIZE)
+# n_classes = len(data.df_train['label'].unique())
+# 
+# train_gen_clf = data.get_pipeline(type='train', output='label', seed=SEED)
+# train_gen_localize = data.get_pipeline(type='train', output='bbox', seed=SEED)
+# train_gen_clf_localize = data.get_pipeline(type='train', seed=SEED)
+# steps_per_epoch=tf.math.ceil(len(data.df_train)/data.batch_size)
+# tf.cast(steps_per_epoch, tf.int16).numpy()
+# 
+# valid_gen_clf = data.get_pipeline(type='validation', output='label', seed=SEED)
+# valid_gen_localize = data.get_pipeline(type='train', output='bbox', seed=SEED)
+# valid_gen_clf_localize = data.get_pipeline(type='validation', seed=SEED)
+# validation_steps = tf.math.ceil(len(data.df_valid)/data.batch_size)
+# validation_steps = tf.cast(validation_steps, tf.int16).numpy()
+# =============================================================================
         
-optimizer = SGD(lr=0.01, momentum=0.9, decay=0.01)
+optimizer = SGD(lr=1e-7, momentum=0.9, decay=0.01)
 
 DefaultConv2D = partial(Conv2D,
                         kernel_size=3,
                         kernel_initializer="he_normal",
-                        #kernel_regularizer=l2(.01),
-                        activation="relu",
+                        # kernel_regularizer=l2(.01),
+                        # activation="relu",
                         padding="SAME")
-
-input = Input(shape=(224,224,1))
-conv_1 = DefaultConv2D(filters=64, kernel_size=7, strides=2)(input)
-max_pool_1 = MaxPooling2D(pool_size=2)(conv_1)
-flatten = Flatten()(max_pool_1)
-class_output = Dense(n_classes, activation="softmax")(flatten)
-bbox_output = Dense(4)(flatten)
 
 # =============================================================================
 # input = Input(shape=(224,224,1))
 # conv_1 = DefaultConv2D(filters=64, kernel_size=7, strides=2)(input)
 # max_pool_1 = MaxPooling2D(pool_size=2)(conv_1)
-# conv_2 = DefaultConv2D(filters=128)(max_pool_1)
-# max_pool_2 = MaxPooling2D(pool_size=2)(conv_2)
-# conv_3 = DefaultConv2D(filters=256)(max_pool_2)
-# max_pool_3 = MaxPooling2D(pool_size=2)(conv_3)
-# flatten = Flatten()(max_pool_3)
-# dense_1 = Dense(units=128, activation="relu")(flatten)
-# drop_1 = Dropout(0.5)(dense_1)
-# dense_2 = Dense(units=64, activation="relu")(drop_1)
-# drop_2 = Dropout(0.5)(dense_2)
-# class_output = Dense(n_classes, activation="softmax")(drop_2)
-# bbox_output = Dense(4)(drop_2)
-# 
+# flatten = Flatten()(max_pool_1)
+# class_output = Dense(n_classes, activation="softmax")(flatten)
+# bbox_output = Dense(4)(flatten)
 # =============================================================================
+
+input = Input(shape=(224,224,1))
+
+conv_1 = DefaultConv2D(filters=64, kernel_size=7, strides=2)(input)
+norm_1 = BatchNormalization()(conv_1)
+relu_1 = Activation(activation="relu")(norm_1)
+max_pool_1 = MaxPooling2D(pool_size=2)(relu_1)
+
+
+conv_2 = DefaultConv2D(filters=128)(max_pool_1)
+norm_2 = BatchNormalization()(conv_2)
+relu_2 = Activation(activation="relu")(norm_2)
+max_pool_2 = MaxPooling2D(pool_size=2)(relu_2)
+
+conv_3 = DefaultConv2D(filters=256)(max_pool_2)
+max_pool_3 = MaxPooling2D(pool_size=2)(conv_3)
+#norm_3 = BatchNormalization()(max_pool_3)
+
+flatten = Flatten()(max_pool_3)
+dense_1 = Dense(units=128, activation="relu")(flatten)
+drop_1 = Dropout(0.5)(dense_1)
+dense_2 = Dense(units=64, activation="relu")(drop_1)
+drop_2 = Dropout(0.5)(dense_2)
+
+class_output = Dense(n_classes, activation="softmax")(drop_2)
+bbox_output = Dense(4)(drop_2)
+
 
 # =============================================================================
 # clf_model = Model(inputs=input, outputs=class_output)
@@ -81,7 +98,9 @@ bbox_output = Dense(4)(flatten)
 #         validation_data=valid_gen_clf,
 #         validation_steps=validation_steps,
 #         verbose=1)
-# 
+# =============================================================================
+
+# =============================================================================
 # localize_model = Model(inputs=input, outputs=bbox_output)
 # localize_model.compile(loss="mse",
 #               optimizer=optimizer,
@@ -104,7 +123,7 @@ clf_localize_model.compile(loss=["categorical_crossentropy", "mse"],
 
 history_clf_localize = clf_localize_model.fit(
         train_gen_clf_localize,
-        epochs = 1,
+        epochs = 5,
         steps_per_epoch=steps_per_epoch,
         validation_data=valid_gen_clf_localize,
         validation_steps=validation_steps,
