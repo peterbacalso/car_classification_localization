@@ -1,3 +1,5 @@
+import os
+import time
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -9,17 +11,20 @@ from tensorflow.keras.layers import (
     Flatten, Dropout, BatchNormalization,
     Activation
 )
+from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.backend import clear_session
 from functools import partial
 
 from data.data_loader import DataLoader
 
-clear_session()
+clear_session() # Clear models from previous sessions
 
-BATCH_SIZE=16
+# Constants
+BATCH_SIZE=32
 SEED=23
 
+# Init Pipeline
 data = DataLoader('../data/cars_train', 
                   '../data/cars_test', 
                   '../data/devkit', 
@@ -37,8 +42,20 @@ valid_gen_localize = data.get_pipeline(type='train', output='bbox', seed=SEED)
 valid_gen_clf_localize = data.get_pipeline(type='validation', seed=SEED)
 validation_steps = tf.math.ceil(len(data.df_valid)/data.batch_size)
 validation_steps = tf.cast(validation_steps, tf.int16).numpy()
-        
-optimizer = SGD(lr=1e-1, momentum=0.9, decay=0.01)
+
+# Callbacks
+
+root_logdir = os.path.join(os.curdir, 'logs')
+def get_run_logdir():
+    run_id = time.strftime(f"run_%Y_%m_%d-%H_%M_%S")
+    return os.path.join(root_logdir, run_id)
+run_logdir = get_run_logdir()
+tensorboard_cb = TensorBoard(run_logdir)
+
+
+# Model
+
+optimizer = SGD(lr=.3, momentum=0.9, decay=0.01)
 
 DefaultConv2D = partial(Conv2D,
                         kernel_size=3,
@@ -106,7 +123,16 @@ relu_4b = Activation(activation="relu")(norm_4b)
 
 max_pool_4 = MaxPooling2D(pool_size=2)(relu_4b)
 
-flatten = Flatten()(max_pool_3)
+conv_5a = DefaultConv2D(filters=256, kernel_size=1)(max_pool_4)
+norm_5a = BatchNormalization()(conv_5a)
+relu_5a = Activation(activation="relu")(norm_5a)
+conv_5b = DefaultConv2D(filters=256)(relu_5a)
+norm_5b = BatchNormalization()(conv_5b)
+relu_5b = Activation(activation="relu")(norm_5b)
+
+max_pool_5 = MaxPooling2D(pool_size=2)(relu_5b)
+
+flatten = Flatten()(max_pool_2)
 
 drop_1 = Dropout(0.5)(flatten)
 dense_1 = Dense(units=128, activation="relu")(drop_1)
@@ -165,6 +191,7 @@ history_clf_localize = clf_localize_model.fit(
         steps_per_epoch=steps_per_epoch,
         validation_data=valid_gen_clf_localize,
         validation_steps=validation_steps,
+        callbacks=[tensorboard_cb],
         verbose=1)
 
 # =============================================================================
