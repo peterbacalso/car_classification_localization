@@ -1,6 +1,7 @@
 data/cars_test/*
 data/cars_train/*
 data/devkit/*
+models/logs/*
 
 
 # Byte-compiled / optimized / DLL files
