@@ -71,7 +71,7 @@ class DataLoader():
             type:           Can be 'train', 'validation', or 'test'
             output:         Determines the output values of the pipline. 
                             Can be one of 'label', 'bbox', or 'label_bbox'.
-            channels:       Number of channels of the output image
+            channels:       Number of channels of the output image (1-3)
             apply_aug:      Bool that determines whether to apply augmentation
             onehot:         Bool that determines whether to 
                             one hot encode the class labels
@@ -152,7 +152,7 @@ def load_and_resize_image(path, outputs, channels=1):
     return img, outputs
 
 def augment_img(img, outputs):
-    img = tf.image.random_flip_left_right(img)
+    #img = tf.image.random_flip_left_right(img)
     #img = tf.image.random_flip_up_down(img)
     img = tf.image.random_brightness(img, .1)
     img = tf.image.random_jpeg_quality(img, 50, 100)

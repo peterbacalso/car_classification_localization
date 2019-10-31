@@ -76,26 +76,24 @@ def CNN(n_classes, output="label_bbox"):
     
     max_pool_4 = MaxPooling2D(pool_size=2)(relu_4b)
     
-# =============================================================================
-#     conv_5a = DefaultConv2D(filters=256, kernel_size=1)(max_pool_4)
-#     norm_5a = BatchNormalization()(conv_5a)
-#     relu_5a = Activation(activation="relu")(norm_5a)
-#     conv_5b = DefaultConv2D(filters=256)(relu_5a)
-#     norm_5b = BatchNormalization()(conv_5b)
-#     relu_5b = Activation(activation="relu")(norm_5b)
-#     
-#     max_pool_5 = MaxPooling2D(pool_size=2)(relu_5b)
-# =============================================================================
+    conv_5a = DefaultConv2D(filters=256, kernel_size=1)(max_pool_4)
+    norm_5a = BatchNormalization()(conv_5a)
+    relu_5a = Activation(activation="relu")(norm_5a)
+    conv_5b = DefaultConv2D(filters=256)(relu_5a)
+    norm_5b = BatchNormalization()(conv_5b)
+    relu_5b = Activation(activation="relu")(norm_5b)
     
-    flatten = Flatten()(max_pool_4)
+    max_pool_5 = MaxPooling2D(pool_size=2)(relu_5b)
+    
+    flatten = Flatten()(max_pool_5)
 
     drop_1 = Dropout(0.5)(flatten)
-    dense_1 = Dense(units=128, activation="relu")(drop_1)
+    dense_1 = Dense(units=128)(drop_1)
     norm_4 = BatchNormalization()(dense_1)
     relu_4 = Activation(activation="relu")(norm_4)
     
     drop_2 = Dropout(0.5)(relu_4)
-    dense_2 = Dense(units=64, activation="relu")(drop_2)
+    dense_2 = Dense(units=64)(drop_2)
     norm_5 = BatchNormalization()(dense_2)
     relu_5 = Activation(activation="relu")(norm_5)
     
@@ -103,7 +101,7 @@ def CNN(n_classes, output="label_bbox"):
     class_output = Dense(n_classes, 
                          activation="softmax", 
                          name="classifier")(drop_3)
-    bbox_output = Dense(4, name="localizer")(drop_2)
+    bbox_output = Dense(units=4, name="localizer")(drop_3)
 
     model=None
     if output=="bbox":
