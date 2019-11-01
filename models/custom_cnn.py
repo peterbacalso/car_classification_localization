@@ -10,7 +10,7 @@ from functools import partial
 DefaultConv2D = partial(Conv2D,
                         kernel_size=3,
                         kernel_initializer="he_normal",
-                        # kernel_regularizer=l2(.01),
+                        kernel_regularizer=l2(1e-6),
                         # activation="relu",
                         padding="SAME")
 
@@ -26,16 +26,6 @@ DefaultConv2D = partial(Conv2D,
 
 def CNN(n_classes, output="label_bbox"):
     input = Input(shape=(224,224,1))
-    
-    conv_1a = DefaultConv2D(filters=64, padding='same')(input)
-    norm_1a = BatchNormalization()(conv_1a)
-    relu_1a = Activation(activation="relu")(norm_1a)
-    conv_1b = DefaultConv2D(filters=64, padding='same')(relu_1a)
-    norm_1b = BatchNormalization()(conv_1b)
-    relu_1b = Activation(activation="relu")(norm_1b)
-    conv_1c = DefaultConv2D(filters=64, padding='same')(relu_1b)
-    norm_1c = BatchNormalization()(conv_1c)
-    relu_1c = Activation(activation="relu")(norm_1c)
     
     conv_1a = DefaultConv2D(filters=64, padding='same')(input)
     norm_1a = BatchNormalization()(conv_1a)

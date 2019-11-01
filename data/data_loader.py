@@ -43,7 +43,7 @@ class DataLoader():
         df['fname'] = [f'{train_path}/{f}' 
                 for f in df['fname']] #  Appending Path
         #df = df[df['label']<=3] # start with small sample for tuning initial hyperparams
-        df = df[(df['label']>3) & (df['label']<=5)]
+        #df = df[(df['label']>3) & (df['label']<=5)]
         
         df_train, df_valid = train_test_split(df, test_size=valid_split)
         
@@ -142,7 +142,7 @@ class DataLoader():
 # =============================================================================
 
 def standard_scaler(img, outputs):
-    img = img/255
+    img = img/255.0
     return img, outputs
 
 def load_and_resize_image(path, outputs, channels=1):

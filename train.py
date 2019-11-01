@@ -13,7 +13,7 @@ from models.custom_cnn import CNN
 clear_session() # Clear models from previous sessions
 
 # Constants
-BATCH_SIZE=10
+BATCH_SIZE=32
 SEED=23
 
 # Initialize Pipeline
@@ -47,7 +47,7 @@ run_logdir = get_run_logdir()
 tensorboard_cb = TensorBoard(run_logdir)
 
 # Optimizer
-optimizer = SGD(lr=.01, momentum=0.9, decay=0.01)
+optimizer = SGD(lr=1e-6, momentum=0.9, decay=0.01)
 
 # Models
 
@@ -92,7 +92,7 @@ clf_localize_model.compile(loss=["categorical_crossentropy", "msle"],
 
 history_clf_localize = clf_localize_model.fit(
         train_gen_clf_localize,
-        epochs = 20,
+        epochs = 10,
         steps_per_epoch=steps_per_epoch,
         validation_data=valid_gen_clf_localize,
         validation_steps=validation_steps,
