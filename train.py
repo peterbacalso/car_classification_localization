@@ -9,6 +9,7 @@ from tensorflow.keras.backend import clear_session
 
 from data.data_loader import DataLoader
 from models.custom_cnn import CNN
+from models.three_layer_cnn import CNN_3
 
 clear_session() # Clear models from previous sessions
 
@@ -23,19 +24,35 @@ data = DataLoader('./data/cars_train',
                   batch_size=BATCH_SIZE)
 n_classes = len(data.df_train['label'].unique())
 
-train_gen_clf = data.get_pipeline(type='train', output='label', seed=SEED)
-train_gen_localize = data.get_pipeline(type='train', output='bbox', seed=SEED)
-train_gen_clf_localize = data.get_pipeline(type='train', 
-                                           apply_aug=False, seed=SEED)
+train_gen_clf = data.get_pipeline(type='train',
+                                  output='label',
+                                  channels=3,
+                                  seed=SEED)
+train_gen_localize = data.get_pipeline(type='train', 
+                                       output='bbox',
+                                       channels=3,
+                                       seed=SEED)
+train_gen_clf_localize = data.get_pipeline(type='train',
+                                           channels=3,
+                                           apply_aug=False, 
+                                           seed=SEED)
 steps_per_epoch=tf.math.ceil(len(data.df_train)/data.batch_size)
 tf.cast(steps_per_epoch, tf.int16).numpy()
 
-valid_gen_clf = data.get_pipeline(type='validation', output='label', 
-                                  apply_aug=False, seed=SEED)
-valid_gen_localize = data.get_pipeline(type='validation', output='bbox', 
-                                       apply_aug=False, seed=SEED)
-valid_gen_clf_localize = data.get_pipeline(type='validation', 
-                                           apply_aug=False, seed=SEED)
+valid_gen_clf = data.get_pipeline(type='validation',
+                                  output='label',
+                                  channels=3,
+                                  apply_aug=False,
+                                  seed=SEED)
+valid_gen_localize = data.get_pipeline(type='validation',
+                                       output='bbox',
+                                       channels=3,
+                                       apply_aug=False,
+                                       seed=SEED)
+valid_gen_clf_localize = data.get_pipeline(type='validation',
+                                           channels=3,
+                                           apply_aug=False,
+                                           seed=SEED)
 validation_steps = tf.math.ceil(len(data.df_valid)/data.batch_size)
 validation_steps = tf.cast(validation_steps, tf.int16).numpy()
 
@@ -53,7 +70,8 @@ optimizer = SGD(lr=1e-2, momentum=0.9, decay=0.01)
 # Models
 
 # Classification Only
-clf_model = CNN(n_classes, output="label")
+clf_model = CNN_3(n_classes, channels=3, output="label")
+# clf_model = CNN(n_classes, channels=3, output="label")
 clf_model.compile(loss="categorical_crossentropy",
               optimizer=optimizer,
               metrics=["accuracy"])

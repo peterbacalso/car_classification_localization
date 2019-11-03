@@ -29,7 +29,7 @@ plt.show()
 # =============================================================================
 
 
-ds = data.get_pipeline(onehot=False)
+ds = data.get_pipeline(onehot=False, channels=3)
 labels = []
     
 

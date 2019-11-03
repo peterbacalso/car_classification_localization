@@ -14,8 +14,8 @@ DefaultConv2D = partial(Conv2D,
                         # activation="relu",
                         padding="same")
 
-def CNN(n_classes, output="label_bbox"):
-    input = Input(shape=(224,224,1))
+def CNN(n_classes, channels=1, output="label_bbox"):
+    input = Input(shape=(224,224,channels))
     
     conv_1a = DefaultConv2D(filters=64, padding='same')(input)
     #norm_1a = BatchNormalization()(conv_1a)
@@ -68,12 +68,12 @@ def CNN(n_classes, output="label_bbox"):
     flatten = Flatten()(max_pool_5)
 
     drop_1 = Dropout(0.5)(flatten)
-    dense_1 = Dense(units=1024)(drop_1)
+    dense_1 = Dense(units=256)(drop_1)
     #norm_4 = BatchNormalization()(dense_1)
     relu_4 = Activation(activation="relu")(dense_1)
     
     drop_2 = Dropout(0.5)(relu_4)
-    dense_2 = Dense(units=512)(drop_2)
+    dense_2 = Dense(units=128)(drop_2)
     #norm_5 = BatchNormalization()(dense_2)
     relu_5 = Activation(activation="relu")(dense_2)
     
