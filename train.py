@@ -25,6 +25,8 @@ data = DataLoader('./data/cars_train',
                   batch_size=BATCH_SIZE)
 n_classes = len(data.df_train['label'].unique())
 
+print(f'{n_classes} CLASSES, Random Chance: {1/n_classes}')
+
 train_gen_clf = data.get_pipeline(type='train',
                                   output='label',
                                   channels=CHANNELS,
@@ -70,20 +72,20 @@ run_logdir = get_run_logdir()
 tensorboard_cb = TensorBoard(run_logdir)
 
 # Optimizer
-optimizer = SGD(lr=1e-1, momentum=0.9, decay=0.01)
+optimizer = SGD(lr=.1, momentum=0.9, decay=0.01)
 
 # Models
 
 # Classification Only
-clf_model = CNN_3(n_classes, channels=CHANNELS, output="label")
-#clf_model = CNN(n_classes, channels=CHANNELS, output="label")
+#clf_model = CNN_3(n_classes, channels=CHANNELS, output="label")
+clf_model = CNN(n_classes, channels=CHANNELS, output="label")
 clf_model.compile(loss="categorical_crossentropy",
               optimizer=optimizer,
               metrics=["accuracy"])
 
 history_clf = clf_model.fit(
         train_gen_clf,
-        epochs=5,
+        epochs=200,
         steps_per_epoch=steps_per_epoch,
         validation_data=valid_gen_clf,
         validation_steps=validation_steps,

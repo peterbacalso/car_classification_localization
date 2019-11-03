@@ -9,7 +9,7 @@ from functools import partial
 DefaultConv2D = partial(Conv2D,
                         kernel_size=3,
                         kernel_initializer="he_normal",
-                        kernel_regularizer=l2(1e-6),
+                        #kernel_regularizer=l2(1e-6),
                         activation="relu",
                         padding="same")
 

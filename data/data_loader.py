@@ -35,7 +35,7 @@ class DataLoader():
         df['label'] = df['label']-1 # indexing starts on zero.
         df['fname'] = [f'{train_path}/{f}' 
                 for f in df['fname']] #  Appending Path
-        df = df[df['label']<=1] # start with small sample for tuning initial hyperparams
+        df = df[df['label']<=50] # start with small sample for tuning initial hyperparams
         #df = df[(df['label']>3) & (df['label']<=5)]
         
         df_train, df_valid = train_test_split(df, test_size=valid_split)
