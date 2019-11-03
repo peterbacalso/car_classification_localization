@@ -9,7 +9,7 @@ from tensorflow.keras.backend import clear_session
 
 from data.data_loader import DataLoader
 from models.custom_cnn import CNN
-from models.three_layer_cnn import CNN_3
+from models.three_cnn_layer import CNN_3
 
 clear_session() # Clear models from previous sessions
 
