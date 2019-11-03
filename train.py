@@ -25,7 +25,8 @@ n_classes = len(data.df_train['label'].unique())
 
 train_gen_clf = data.get_pipeline(type='train', output='label', seed=SEED)
 train_gen_localize = data.get_pipeline(type='train', output='bbox', seed=SEED)
-train_gen_clf_localize = data.get_pipeline(type='train', seed=SEED)
+train_gen_clf_localize = data.get_pipeline(type='train', 
+                                           apply_aug=False, seed=SEED)
 steps_per_epoch=tf.math.ceil(len(data.df_train)/data.batch_size)
 tf.cast(steps_per_epoch, tf.int16).numpy()
 
@@ -47,25 +48,23 @@ run_logdir = get_run_logdir()
 tensorboard_cb = TensorBoard(run_logdir)
 
 # Optimizer
-optimizer = SGD(lr=1e-6, momentum=0.9, decay=0.01)
+optimizer = SGD(lr=1e-2, momentum=0.9, decay=0.01)
 
 # Models
 
-# =============================================================================
-# # Classification Only
-# clf_model = CNN(n_classes, output="label")
-# clf_model.compile(loss="categorical_crossentropy",
-#               optimizer=optimizer,
-#               metrics=["accuracy"])
-# 
-# history_clf = clf_model.fit(
-#         train_gen_clf,
-#         epochs = 20,
-#         steps_per_epoch=steps_per_epoch,
-#         validation_data=valid_gen_clf,
-#         validation_steps=validation_steps,
-#         verbose=1)
-# =============================================================================
+# Classification Only
+clf_model = CNN(n_classes, output="label")
+clf_model.compile(loss="categorical_crossentropy",
+              optimizer=optimizer,
+              metrics=["accuracy"])
+
+history_clf = clf_model.fit(
+        train_gen_clf,
+        epochs = 20,
+        steps_per_epoch=steps_per_epoch,
+        validation_data=valid_gen_clf,
+        validation_steps=validation_steps,
+        verbose=1)
 
 # =============================================================================
 # # Bounding Box Only
@@ -83,21 +82,23 @@ optimizer = SGD(lr=1e-6, momentum=0.9, decay=0.01)
 #         verbose=1)
 # =============================================================================
 
-# Classification and Bounding Box
-clf_localize_model = CNN(n_classes)
-clf_localize_model.compile(loss=["categorical_crossentropy", "msle"],
-              loss_weights=[.8,.2],
-              optimizer=optimizer,
-              metrics=["accuracy"])
-
-history_clf_localize = clf_localize_model.fit(
-        train_gen_clf_localize,
-        epochs = 10,
-        steps_per_epoch=steps_per_epoch,
-        validation_data=valid_gen_clf_localize,
-        validation_steps=validation_steps,
-        callbacks=[tensorboard_cb],
-        verbose=1)
+# =============================================================================
+# # Classification and Bounding Box
+# clf_localize_model = CNN(n_classes)
+# clf_localize_model.compile(loss=["categorical_crossentropy", "msle"],
+#               loss_weights=[.8,.2],
+#               optimizer=optimizer,
+#               metrics=["accuracy"])
+# 
+# history_clf_localize = clf_localize_model.fit(
+#         train_gen_clf_localize,
+#         epochs = 200,
+#         steps_per_epoch=steps_per_epoch,
+#         validation_data=valid_gen_clf_localize,
+#         validation_steps=validation_steps,
+#         callbacks=[tensorboard_cb],
+#         verbose=1)
+# =============================================================================
 
 
 
