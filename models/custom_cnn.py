@@ -5,25 +5,28 @@ from tensorflow.keras.layers import (
     Activation
 )
 from tensorflow.keras.regularizers import l2
+from tensorflow.keras.optimizers import SGD, Adam
 from functools import partial
 
-DefaultConv2D = partial(Conv2D,
-                        kernel_size=3,
-                        kernel_initializer="he_normal",
-                        kernel_regularizer=l2(1e-6),
-                        # activation="relu",
-                        padding="same")
 
-def CNN(n_classes, channels=1, output="label_bbox"):
+def CNN(n_classes, lr=.001, reg=1e-6, channels=1, output="label_bbox"):
+    
+    DefaultConv2D = partial(Conv2D,
+                            kernel_size=3,
+                            kernel_initializer="he_normal",
+                            kernel_regularizer=l2(reg),
+                            # activation="relu",
+                            padding="same")
+    
     input = Input(shape=(224,224,channels))
     
-    conv_1a = DefaultConv2D(filters=64, padding='same')(input)
+    conv_1a = DefaultConv2D(filters=64)(input)
     norm_1a = BatchNormalization()(conv_1a)
     relu_1a = Activation(activation="relu")(norm_1a)
-    conv_1b = DefaultConv2D(filters=64, padding='same')(relu_1a)
+    conv_1b = DefaultConv2D(filters=64)(relu_1a)
     norm_1b = BatchNormalization()(conv_1b)
     relu_1b = Activation(activation="relu")(norm_1b)
-    conv_1c = DefaultConv2D(filters=64, padding='same')(relu_1b)
+    conv_1c = DefaultConv2D(filters=64)(relu_1b)
     norm_1c = BatchNormalization()(conv_1c)
     relu_1c = Activation(activation="relu")(norm_1c)
     
@@ -63,11 +66,11 @@ def CNN(n_classes, channels=1, output="label_bbox"):
 #     conv_5b = DefaultConv2D(filters=512)(relu_5a)
 #     norm_5b = BatchNormalization()(conv_5b)
 #     relu_5b = Activation(activation="relu")(norm_5b)
+#     
+#     max_pool_5 = MaxPooling2D(pool_size=2)(max_pool_2)
 # =============================================================================
     
-    max_pool_5 = MaxPooling2D(pool_size=2)(max_pool_2)
-    
-    flatten = Flatten()(max_pool_5)
+    flatten = Flatten()(max_pool_2)
 
     drop_1 = Dropout(0.5)(flatten)
     dense_1 = Dense(units=256)(drop_1)
@@ -84,13 +87,28 @@ def CNN(n_classes, channels=1, output="label_bbox"):
                          activation="softmax", 
                          name="classifier")(drop_3)
     bbox_output = Dense(units=4, name="localizer")(drop_3)
+    
+    # Optimizer
+    #optimizer = SGD(lr=.1, momentum=0.9, decay=0.01)
+    optimizer = Adam(lr=lr)
 
     model=None
     if output=="bbox":
         model = Model(inputs=input, outputs=bbox_output)
+        model.compile(loss="msle",
+                      optimizer=optimizer,
+                      metrics=["accuracy"])
+        
     elif output=="label":
         model = Model(inputs=input, outputs=class_output)
+        model.compile(loss="categorical_crossentropy",
+                      optimizer=optimizer,
+                      metrics=["accuracy"])
     else:
         model = Model(inputs=input, outputs=[class_output,bbox_output])
+        model.compile(loss=["categorical_crossentropy", "msle"],
+                      loss_weights=[.8,.2],
+                      optimizer=optimizer,
+                      metrics=["accuracy"])
     return model
 

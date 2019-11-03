@@ -15,7 +15,7 @@ class DataLoader():
     
     def __init__(self, train_path='cars_train', 
                  test_path='cars_test', devkit='devkit', 
-                 batch_size=32, valid_split=.15):
+                 batch_size=32, valid_split=.2):
         devkit_path = Path(devkit)
         
         meta = loadmat(devkit_path/'cars_meta.mat')
@@ -35,7 +35,7 @@ class DataLoader():
         df['label'] = df['label']-1 # indexing starts on zero.
         df['fname'] = [f'{train_path}/{f}' 
                 for f in df['fname']] #  Appending Path
-        df = df[df['label']<=50] # start with small sample for tuning initial hyperparams
+        #df = df[df['label']<=75] # start with small sample for tuning initial hyperparams
         #df = df[(df['label']>3) & (df['label']<=5)]
         
         df_train, df_valid = train_test_split(df, test_size=valid_split)
@@ -94,6 +94,15 @@ class DataLoader():
             return ds
         else:
             one_hot_df_labels = pd.get_dummies(df['label'], prefix=['label'])
+            if type=='validation':
+                # get the columns in train that are not in valid
+                one_hot_df_train_labels = pd.get_dummies(self.df_train['label'], prefix=['label'])
+                col_to_add = np.setdiff1d(one_hot_df_train_labels.columns, one_hot_df_labels.columns)
+                for c in col_to_add:
+                    one_hot_df_labels[c] = 0
+                # select and reorder the validation columns using the train columns
+                one_hot_df_labels = one_hot_df_labels[one_hot_df_train_labels.columns]
+
             for car_type in df['label'].unique():
                 cars = df[df['label']==car_type]
                 paths = cars['fname']

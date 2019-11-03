@@ -3,8 +3,7 @@ import time
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
-from tensorflow.keras.optimizers import SGD
-from tensorflow.keras.callbacks import TensorBoard
+from tensorflow.keras.callbacks import TensorBoard, EarlyStopping, ModelCheckpoint
 from tensorflow.keras.backend import clear_session
 
 from data.data_loader import DataLoader
@@ -13,12 +12,14 @@ from models.three_cnn_layer import CNN_3
 
 clear_session() # Clear models from previous sessions
 
-# Constants
+# CONSTANTS
+
 BATCH_SIZE=32
 SEED=23
 CHANNELS=1
 
-# Initialize Pipeline
+# PIPELINE
+
 data = DataLoader('./data/cars_train', 
                   './data/cars_test', 
                   './data/devkit', 
@@ -31,16 +32,14 @@ train_gen_clf = data.get_pipeline(type='train',
                                   output='label',
                                   channels=CHANNELS,
                                   seed=SEED)
-# =============================================================================
-# train_gen_localize = data.get_pipeline(type='train', 
-#                                        output='bbox',
-#                                        channels=CHANNELS,
-#                                        seed=SEED)
-# train_gen_clf_localize = data.get_pipeline(type='train',
-#                                            channels=CHANNELS,
-#                                            apply_aug=False, 
-#                                            seed=SEED)
-# =============================================================================
+train_gen_localize = data.get_pipeline(type='train', 
+                                       output='bbox',
+                                       channels=CHANNELS,
+                                       seed=SEED)
+train_gen_clf_localize = data.get_pipeline(type='train',
+                                           channels=CHANNELS,
+                                           apply_aug=False, 
+                                           seed=SEED)
 steps_per_epoch=tf.math.ceil(len(data.df_train)/data.batch_size)
 tf.cast(steps_per_epoch, tf.int16).numpy()
 
@@ -49,71 +48,105 @@ valid_gen_clf = data.get_pipeline(type='validation',
                                   channels=CHANNELS,
                                   apply_aug=False,
                                   seed=SEED)
-# =============================================================================
-# valid_gen_localize = data.get_pipeline(type='validation',
-#                                        output='bbox',
-#                                        channels=CHANNELS,
-#                                        apply_aug=False,
-#                                        seed=SEED)
-# valid_gen_clf_localize = data.get_pipeline(type='validation',
-#                                            channels=CHANNELS,
-#                                            apply_aug=False,
-#                                            seed=SEED)
-# =============================================================================
+valid_gen_localize = data.get_pipeline(type='validation',
+                                       output='bbox',
+                                       channels=CHANNELS,
+                                       apply_aug=False,
+                                       seed=SEED)
+valid_gen_clf_localize = data.get_pipeline(type='validation',
+                                           channels=CHANNELS,
+                                           apply_aug=False,
+                                           seed=SEED)
 validation_steps = tf.math.ceil(len(data.df_valid)/data.batch_size)
 validation_steps = tf.cast(validation_steps, tf.int16).numpy()
 
-# Callbacks
+# CALLBACKS
+
+# Tensorboard
 root_logdir = os.path.join(os.curdir, 'logs')
-def get_run_logdir():
-    run_id = time.strftime(f"run_%Y_%m_%d-%H_%M_%S")
+def get_run_logdir(lr, reg):
+    #run_id = time.strftime(f"run_%Y_%m_%d-%H_%M_%S_{lr}_{reg}")
+    run_id = time.strftime(f"lr-{lr}_reg-{reg}")
     return os.path.join(root_logdir, run_id)
-run_logdir = get_run_logdir()
-tensorboard_cb = TensorBoard(run_logdir)
 
-# Optimizer
-optimizer = SGD(lr=.1, momentum=0.9, decay=0.01)
+# Early Stopping
+early_stopping_cb = EarlyStopping(patience=10, restore_best_weights=True)
 
-# Models
 
-# Classification Only
-#clf_model = CNN_3(n_classes, channels=CHANNELS, output="label")
-clf_model = CNN(n_classes, channels=CHANNELS, output="label")
-clf_model.compile(loss="categorical_crossentropy",
-              optimizer=optimizer,
-              metrics=["accuracy"])
+# HYPERPARAMS
 
-history_clf = clf_model.fit(
-        train_gen_clf,
-        epochs=200,
-        steps_per_epoch=steps_per_epoch,
-        validation_data=valid_gen_clf,
-        validation_steps=validation_steps,
-        verbose=1)
+params = {
+        "lr":  [1e-3, 3e-3, 1e-2, 3e-2, 1e-1, 3e-1],
+        "reg": [1e-5, 1e-4, 1e-3, 1e-2, 1e-1]
+}
+     
 
+# MODEL TRAINING
+
+history_list = {}
+
+# Grid Search
+for lr in params['lr']:
+    for reg in params['reg']:
+        print(f'Training with learning rate: {lr}, and l2 reg: {reg}')
+        # Tensorboard
+        run_logdir = get_run_logdir(lr, reg)
+        tensorboard_cb = TensorBoard(run_logdir)
+        
+        # Model Checkpoints
+        checkpoint_cb = None
+        checkpoint_cb = ModelCheckpoint(
+            filepath=f'checkpoints/lr-{lr}_reg-{reg}' + '.{epoch:02d}-{val_loss:.6f}.h5', 
+            verbose=1, save_best_only=True)
+        
 # =============================================================================
-# # Bounding Box Only
-# localize_model = CNN(n_classes, channels=CHANNELS, output="bbox")
-# localize_model.compile(loss="mse",
-#               optimizer=optimizer,
-#               metrics=["accuracy"])
+#         # Classification Only
+#         #clf_model = CNN_3(n_classes, channels=CHANNELS, output="label")
+#         clf_model = CNN(n_classes, lr=lr, reg=reg, channels=CHANNELS, output="label")
 # 
-# history_localize = localize_model.fit(
-#         train_gen_localize,
-#         epochs = 1,
-#         steps_per_epoch=steps_per_epoch,
-#         validation_data=valid_gen_localize,
-#         validation_steps=validation_steps,
-#         verbose=1)
+#         history_clf = None
+#         history_clf = clf_model.fit(
+#             train_gen_clf,
+#             epochs=300,
+#             steps_per_epoch=steps_per_epoch,
+#             validation_data=valid_gen_clf,
+#             validation_steps=validation_steps,
+#             callbacks=[early_stopping_cb, tensorboard_cb, checkpoint_cb],
+#             verbose=1)
 # =============================================================================
+        
+# =============================================================================
+#         # Bounding Box Only
+#         localize_model = CNN(n_classes, lr=lr, reg=reg, channels=CHANNELS, output="bbox")
+#         
+#         history_localize = localize_model.fit(
+#             train_gen_localize,
+#             epochs = 300,
+#             steps_per_epoch=steps_per_epoch,
+#             validation_data=valid_gen_localize,
+#             validation_steps=validation_steps,
+#             callbacks=[early_stopping_cb, tensorboard_cb, checkpoint_cb],
+#             verbose=1)
+# =============================================================================
+        
+        # Classification and Bounding Box
+        clf_localize_model = CNN(n_classes, lr=lr, reg=reg, channels=CHANNELS)
+        
+        history_clf_localize = clf_localize_model.fit(
+            train_gen_clf_localize,
+            epochs = 300,
+            steps_per_epoch=steps_per_epoch,
+            validation_data=valid_gen_clf_localize,
+            validation_steps=validation_steps,
+            callbacks=[early_stopping_cb, tensorboard_cb, checkpoint_cb],
+            verbose=1)
+        
+        
+        history_list[f'lr-{lr}_reg-{reg}'] = history_clf_localize
+
 
 # =============================================================================
-# # Classification and Bounding Box
 # clf_localize_model = CNN(n_classes, channels=CHANNELS)
-# clf_localize_model.compile(loss=["categorical_crossentropy", "msle"],
-#               loss_weights=[.8,.2],
-#               optimizer=optimizer,
-#               metrics=["accuracy"])
 # 
 # history_clf_localize = clf_localize_model.fit(
 #         train_gen_clf_localize,
@@ -121,13 +154,11 @@ history_clf = clf_model.fit(
 #         steps_per_epoch=steps_per_epoch,
 #         validation_data=valid_gen_clf_localize,
 #         validation_steps=validation_steps,
-#         callbacks=[tensorboard_cb],
+#         callbacks=[early_stopping_cb, tensorboard_cb, checkpoint_cb],
 #         verbose=1)
 # =============================================================================
 
-
-
-#  TESTING
+# TESTING
 
 # =============================================================================
 # test_gen_clf = data.get_pipeline(type='test', output='label', apply_aug=False)
