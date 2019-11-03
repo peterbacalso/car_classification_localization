@@ -148,7 +148,7 @@ def augment_img(img, outputs):
     #img = tf.image.random_flip_left_right(img)
     #img = tf.image.random_flip_up_down(img)
     img = tf.image.random_brightness(img, .1)
-    img = tf.image.random_jpeg_quality(img, 50, 100)
+    #img = tf.image.random_jpeg_quality(img, 50, 100)
     return img, outputs
 
 # =============================================================================

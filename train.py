@@ -16,6 +16,7 @@ clear_session() # Clear models from previous sessions
 # Constants
 BATCH_SIZE=32
 SEED=23
+CHANNELS=1
 
 # Initialize Pipeline
 data = DataLoader('./data/cars_train', 
@@ -26,33 +27,37 @@ n_classes = len(data.df_train['label'].unique())
 
 train_gen_clf = data.get_pipeline(type='train',
                                   output='label',
-                                  channels=3,
+                                  channels=CHANNELS,
                                   seed=SEED)
-train_gen_localize = data.get_pipeline(type='train', 
-                                       output='bbox',
-                                       channels=3,
-                                       seed=SEED)
-train_gen_clf_localize = data.get_pipeline(type='train',
-                                           channels=3,
-                                           apply_aug=False, 
-                                           seed=SEED)
+# =============================================================================
+# train_gen_localize = data.get_pipeline(type='train', 
+#                                        output='bbox',
+#                                        channels=CHANNELS,
+#                                        seed=SEED)
+# train_gen_clf_localize = data.get_pipeline(type='train',
+#                                            channels=CHANNELS,
+#                                            apply_aug=False, 
+#                                            seed=SEED)
+# =============================================================================
 steps_per_epoch=tf.math.ceil(len(data.df_train)/data.batch_size)
 tf.cast(steps_per_epoch, tf.int16).numpy()
 
 valid_gen_clf = data.get_pipeline(type='validation',
                                   output='label',
-                                  channels=3,
+                                  channels=CHANNELS,
                                   apply_aug=False,
                                   seed=SEED)
-valid_gen_localize = data.get_pipeline(type='validation',
-                                       output='bbox',
-                                       channels=3,
-                                       apply_aug=False,
-                                       seed=SEED)
-valid_gen_clf_localize = data.get_pipeline(type='validation',
-                                           channels=3,
-                                           apply_aug=False,
-                                           seed=SEED)
+# =============================================================================
+# valid_gen_localize = data.get_pipeline(type='validation',
+#                                        output='bbox',
+#                                        channels=CHANNELS,
+#                                        apply_aug=False,
+#                                        seed=SEED)
+# valid_gen_clf_localize = data.get_pipeline(type='validation',
+#                                            channels=CHANNELS,
+#                                            apply_aug=False,
+#                                            seed=SEED)
+# =============================================================================
 validation_steps = tf.math.ceil(len(data.df_valid)/data.batch_size)
 validation_steps = tf.cast(validation_steps, tf.int16).numpy()
 
@@ -65,20 +70,20 @@ run_logdir = get_run_logdir()
 tensorboard_cb = TensorBoard(run_logdir)
 
 # Optimizer
-optimizer = SGD(lr=1e-2, momentum=0.9, decay=0.01)
+optimizer = SGD(lr=1e-1, momentum=0.9, decay=0.01)
 
 # Models
 
 # Classification Only
-clf_model = CNN_3(n_classes, channels=3, output="label")
-# clf_model = CNN(n_classes, channels=3, output="label")
+clf_model = CNN_3(n_classes, channels=CHANNELS, output="label")
+#clf_model = CNN(n_classes, channels=CHANNELS, output="label")
 clf_model.compile(loss="categorical_crossentropy",
               optimizer=optimizer,
               metrics=["accuracy"])
 
 history_clf = clf_model.fit(
         train_gen_clf,
-        epochs = 20,
+        epochs=5,
         steps_per_epoch=steps_per_epoch,
         validation_data=valid_gen_clf,
         validation_steps=validation_steps,
@@ -86,7 +91,7 @@ history_clf = clf_model.fit(
 
 # =============================================================================
 # # Bounding Box Only
-# localize_model = CNN(n_classes, output="bbox")
+# localize_model = CNN(n_classes, channels=CHANNELS, output="bbox")
 # localize_model.compile(loss="mse",
 #               optimizer=optimizer,
 #               metrics=["accuracy"])
@@ -102,7 +107,7 @@ history_clf = clf_model.fit(
 
 # =============================================================================
 # # Classification and Bounding Box
-# clf_localize_model = CNN(n_classes)
+# clf_localize_model = CNN(n_classes, channels=CHANNELS)
 # clf_localize_model.compile(loss=["categorical_crossentropy", "msle"],
 #               loss_weights=[.8,.2],
 #               optimizer=optimizer,

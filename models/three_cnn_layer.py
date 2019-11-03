@@ -1,7 +1,7 @@
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (
     Input, Conv2D, Dense, MaxPooling2D, 
-    Flatten, Dropout
+    Flatten, Dropout, AveragePooling2D
 )
 from tensorflow.keras.regularizers import l2
 from functools import partial
@@ -16,16 +16,16 @@ DefaultConv2D = partial(Conv2D,
 def CNN_3(n_classes, channels=1, output="label_bbox"):
     input = Input(shape=(224,224,channels))
     
-    conv = DefaultConv2D(filters=64, kernel_size=7, padding='same')(input)    
-    max_pool = MaxPooling2D(pool_size=2)(conv)
+    conv = DefaultConv2D(filters=64, kernel_size=7)(input)    
+    pool = MaxPooling2D(pool_size=2)(conv)
     
-    conv = DefaultConv2D(filters=128, padding='same')(max_pool)
-    max_pool = MaxPooling2D(pool_size=2)(conv)
+    conv = DefaultConv2D(filters=128)(pool)
+    pool = MaxPooling2D(pool_size=2)(conv)
     
-    conv = DefaultConv2D(filters=256, padding='same')(max_pool)
-    max_pool = MaxPooling2D(pool_size=2)(conv)
+    conv = DefaultConv2D(filters=256)(pool)
+    pool = MaxPooling2D(pool_size=2)(conv)
     
-    flatten = Flatten()(max_pool)
+    flatten = Flatten()(pool)
     
     dense = Dense(units=64, activation="relu")(flatten)  
     drop = Dropout(0.5)(dense)
