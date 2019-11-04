@@ -54,17 +54,18 @@ def display_images(df_train, df_test, n):
         sub.add_patch(rect)
         
     plt.show()
+    
+if __name__=="__main__":
+    data = DataLoader()
 
-data = DataLoader()
-
-df_train = data.df_train.merge(data.labels, left_on='label', right_index=True)
-df_train = df_train.sort_index()
+    df_train = data.df_train.merge(data.labels, left_on='label', right_index=True)
+    df_train = df_train.sort_index()
 
 # =============================================================================
-# for i in range(df_train.shape[0]):
-#     display_image(df_train, i)
+#     for i in range(df_train.shape[0]):
+#         display_image(df_train, i)
 # =============================================================================
     
-display_image(df_train, 0)
-display_images(df_train, data.df_test, 20)
+    display_image(df_train, 0)
+    display_images(df_train, data.df_test, 20)
 

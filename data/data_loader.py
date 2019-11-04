@@ -84,51 +84,51 @@ class DataLoader():
             
         if type == 'test':
             paths = df['fname']
-            paths_targets_ds = tf.data.Dataset.from_tensor_slices(paths).cache()
-            paths_targets_ds = paths_targets_ds.shuffle(BUFFER_SIZE)
-            img_targets_ds = paths_targets_ds.map(
+            paths_targets = tf.data.Dataset.from_tensor_slices(paths).cache()
+            paths_targets = paths_targets.shuffle(BUFFER_SIZE)
+            img_targets = paths_targets.map(
                     partial(load_and_resize_image_test, channels=channels),
                     num_parallel_calls=AUTOTUNE)
-            img_targets_ds = img_targets_ds.map(standard_scaler_test).repeat()
-            ds = img_targets_ds.batch(self.batch_size).prefetch(buffer_size=AUTOTUNE)
+            img_targets = img_targets.map(standard_scaler_test).repeat()
+            ds = img_targets.batch(self.batch_size).prefetch(buffer_size=AUTOTUNE)
             return ds
         else:
-            one_hot_df_labels = pd.get_dummies(df['label'], prefix=['label'])
+            one_hot_labels = pd.get_dummies(df['label'], prefix=['label'])
             if type=='validation':
                 # get the columns in train that are not in valid
-                one_hot_df_train_labels = pd.get_dummies(self.df_train['label'], prefix=['label'])
-                col_to_add = np.setdiff1d(one_hot_df_train_labels.columns, one_hot_df_labels.columns)
+                one_hot_train_labels = pd.get_dummies(self.df_train['label'], prefix=['label'])
+                col_to_add = np.setdiff1d(one_hot_train_labels.columns, one_hot_labels.columns)
                 for c in col_to_add:
-                    one_hot_df_labels[c] = 0
+                    one_hot_labels[c] = 0
                 # select and reorder the validation columns using the train columns
-                one_hot_df_labels = one_hot_df_labels[one_hot_df_train_labels.columns]
+                one_hot_labels = one_hot_labels[one_hot_train_labels.columns]
 
             for car_type in df['label'].unique():
                 cars = df[df['label']==car_type]
                 paths = cars['fname']
-                labels = one_hot_df_labels[df['label']==car_type] if onehot else cars['label']
+                labels = one_hot_labels[df['label']==car_type] if onehot else cars['label']
                 bbox = np.log(cars[['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2']])
                 paths = tf.data.Dataset.from_tensor_slices(paths)
                 if output=='label_bbox':
                     targets = tf.data.Dataset.from_tensor_slices((
-                        tf.cast(labels.values, tf.int32), 
-                        tf.cast(bbox.values, tf.int32)
+                        tf.cast(labels.values, tf.uint8), 
+                        tf.cast(bbox.values, tf.int16)
                     ))
                 elif output == 'label':
                     targets = tf.data.Dataset.from_tensor_slices(
-                            tf.cast(labels.values, tf.int32))
+                            tf.cast(labels.values, tf.uint8))
                 elif output == 'bbox':
                     targets = tf.data.Dataset.from_tensor_slices(
-                        tf.cast(bbox.values, tf.int32))
-                paths_targets_ds = tf.data.Dataset.zip((paths, targets)).cache()
-                paths_targets_ds = paths_targets_ds.shuffle(BUFFER_SIZE)
-                img_targets_ds = paths_targets_ds.map(
+                        tf.cast(bbox.values, tf.int16))
+                paths_targets = tf.data.Dataset.zip((paths, targets)).cache()
+                paths_targets = paths_targets.shuffle(BUFFER_SIZE)
+                img_targets = paths_targets.map(
                         partial(load_and_resize_image, channels=channels),
                         num_parallel_calls=AUTOTUNE)
                 if apply_aug:
-                    img_targets_ds = img_targets_ds.map(augment_img)
-                img_targets_ds = img_targets_ds.map(standard_scaler).repeat()
-                datasets.append(img_targets_ds)
+                    img_targets = img_targets.map(augment_img)
+                img_targets = img_targets.map(standard_scaler).repeat()
+                datasets.append(img_targets)
             
         num_labels = len(df['label'].unique())
         sampling_weights = np.ones(num_labels)*(1./num_labels)
@@ -151,6 +151,7 @@ def load_and_resize_image(path, outputs, channels=1):
     img = tf.io.read_file(path)
     img = tf.image.decode_jpeg(img, channels=channels)
     img = tf.image.resize(img, [IMG_SIZE, IMG_SIZE])
+    img = tf.cast(img, tf.float16)
     return img, outputs
 
 def augment_img(img, outputs):
