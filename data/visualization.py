@@ -69,43 +69,45 @@ if __name__=="__main__":
 #         display_image(df_train, i)
 # =============================================================================
     
-# =============================================================================
-#     display_image(df_train, 0)
-#     display_images(df_train, data.df_test, 20)
-# =============================================================================
+    display_image(df_train, 0)
+    display_images(df_train, data.df_test, 20)
     
-    channels=1
-    
-    train_gen = data.get_pipeline(type='train',
-                                  channels=channels)
-    for inputs, outputs in train_gen.take(1):
-        for i in range(inputs.numpy().shape[0]):
-            
-            index = np.argmax(outputs[0][i].numpy())
-            title = data.labels.iloc[index]['labels']
-            
-            img = np.squeeze(inputs.numpy()[i], axis=2) if channels == 1 \
-            else inputs.numpy()[i]
-            
-            image = Image.fromarray(img, mode='L') if channels == 1 \
-            else Image.fromarray(img)
-            plt.imshow(image)
-            
-            bbox_x1 = outputs[1][i][0].numpy()
-            bbox_y1 = outputs[1][i][1].numpy()
-            bbox_x2 = outputs[1][i][2].numpy()
-            bbox_y2 = outputs[1][i][3].numpy()
-            
-            xy = bbox_x1, bbox_y1
-            width = bbox_x2 - bbox_x1
-            height = bbox_y2 - bbox_y1
-            rect = Rectangle(xy, width, height, fill=False, color='r', linewidth=2)
-            
-            plt.axis('off')
-            plt.title(title)
-            plt.gca().add_patch(rect)
-            
-            plt.show()
+# =============================================================================
+#     # Comment out the standard scaler in data loader to use visualization code below
+#     channels=1
+#     
+#     train_gen = data.get_pipeline(type='train',
+#                                   apply_aug=False,
+#                                   channels=channels)
+#     for inputs, outputs in train_gen.take(1):
+#         for i in range(inputs.numpy().shape[0]):
+#             
+#             index = np.argmax(outputs[0][i].numpy())
+#             title = data.labels.iloc[index]['labels']
+#             
+#             img = np.squeeze(inputs.numpy()[i], axis=2) if channels == 1 \
+#             else inputs.numpy()[i]
+#             
+#             image = Image.fromarray(img, mode='L') if channels == 1 \
+#             else Image.fromarray(img)
+#             plt.imshow(image)
+#             
+#             bbox_x1 = outputs[1][i][0].numpy()
+#             bbox_y1 = outputs[1][i][1].numpy()
+#             bbox_x2 = outputs[1][i][2].numpy()
+#             bbox_y2 = outputs[1][i][3].numpy()
+#             
+#             xy = bbox_x1, bbox_y1
+#             width = bbox_x2 - bbox_x1
+#             height = bbox_y2 - bbox_y1
+#             rect = Rectangle(xy, width, height, fill=False, color='r', linewidth=2)
+#             
+#             plt.axis('off')
+#             plt.title(title)
+#             plt.gca().add_patch(rect)
+#             
+#             plt.show()
+# =============================================================================
             
 
 

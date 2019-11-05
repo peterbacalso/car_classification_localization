@@ -31,17 +31,17 @@ def load_data(output="label_bbox", channels=1):
     
     train_gen = data.get_pipeline(type='train',
                                   output=output,
-                                  apply_aug=False,
+                                  apply_aug=True, # incorporate resize w/ false
                                   channels=channels,
                                   seed=SEED)
     steps_per_epoch = tf.math.ceil(len(data.df_train)/data.batch_size)
     steps_per_epoch = tf.cast(steps_per_epoch, tf.int16).numpy()
     
     valid_gen = data.get_pipeline(type='validation',
-                                      output=output,
-                                      channels=channels,
-                                      apply_aug=False,
-                                      seed=SEED)
+                                  output=output,
+                                  channels=channels,
+                                  apply_aug=True, # incorporate resize w/ false
+                                  seed=SEED)
     validation_steps = tf.math.ceil(len(data.df_valid)/data.batch_size)
     validation_steps = tf.cast(validation_steps, tf.int16).numpy()
     

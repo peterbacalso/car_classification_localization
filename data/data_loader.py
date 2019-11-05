@@ -53,6 +53,9 @@ class DataLoader():
         df_test['fname'] = [f'{test_path}/{f}' 
                for f in df_test['fname']] #  Appending Path
         
+        resizer = iaa.Sequential([
+            iaa.Resize({"height": IMG_SIZE, "width": IMG_SIZE}),
+        ])
         augmenter = iaa.Sequential([
             iaa.Resize({"height": IMG_SIZE, "width": IMG_SIZE}),
             iaa.Fliplr(0.5), # horizontal flips
@@ -90,6 +93,7 @@ class DataLoader():
         self.labels = labels
         self.batch_size = batch_size
         self.augmenter = augmenter
+        self.resizer = resizer
         
     def get_pipeline(self, type='train', output='label_bbox', channels=1,
                      apply_aug=True, onehot=True, seed=None):
@@ -124,14 +128,17 @@ class DataLoader():
                     partial(load_and_resize_image_test, channels=channels),
                     num_parallel_calls=AUTOTUNE)
             img_targets = img_targets.map(standard_scaler_test).repeat()
-            ds = img_targets.batch(self.batch_size).prefetch(buffer_size=AUTOTUNE)
+            ds = img_targets.batch(self.batch_size).prefetch(
+                    buffer_size=AUTOTUNE)
             return ds
         else:
             one_hot_labels = pd.get_dummies(df['label'], prefix=['label'])
             if type=='validation':
                 # get the columns in train that are not in valid
-                one_hot_train_labels = pd.get_dummies(self.df_train['label'], prefix=['label'])
-                col_to_add = np.setdiff1d(one_hot_train_labels.columns, one_hot_labels.columns)
+                one_hot_train_labels = pd.get_dummies(
+                        self.df_train['label'], prefix=['label'])
+                col_to_add = np.setdiff1d(
+                        one_hot_train_labels.columns, one_hot_labels.columns)
                 for c in col_to_add:
                     one_hot_labels[c] = 0
                 # select and reorder the validation columns using the train columns
@@ -140,7 +147,8 @@ class DataLoader():
             for car_type in df['label'].unique():
                 cars = df[df['label']==car_type]
                 paths = cars['fname']
-                labels = one_hot_labels[df['label']==car_type] if onehot else cars['label']
+                labels = one_hot_labels[df['label']==car_type] \
+                if onehot else cars['label']
                 #bbox = np.log(cars[['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2']])
                 bbox = cars[['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2']]
                 paths = tf.data.Dataset.from_tensor_slices(paths)
@@ -166,13 +174,14 @@ class DataLoader():
                                     augmenter=self.augmenter,
                                     output_type=output),
                             num_parallel_calls=AUTOTUNE)
-# =============================================================================
-#                 img_targets = paths_targets.map(
-#                         resize_image,
-#                         num_parallel_calls=AUTOTUNE)
-# =============================================================================
-                #img_targets = img_targets.map(standard_scaler).repeat()
-                img_targets = img_targets.repeat()
+                else:
+                    img_targets = img_targets.map(
+                            partial(augment_img, 
+                                    augmenter=self.resizer,
+                                    output_type=output),
+                            num_parallel_calls=AUTOTUNE)
+                img_targets = img_targets.map(standard_scaler).repeat()
+                #img_targets = img_targets.repeat()
                 datasets.append(img_targets)
             
         num_labels = len(df['label'].unique())
@@ -189,7 +198,8 @@ class DataLoader():
 # =============================================================================
 
 def standard_scaler(img, outputs):
-    img = img/255.0
+    img = tf.cast(img, tf.float16)
+    img = img/255.0 - .5
     return img, outputs
 
 def load_image(path, outputs, channels=1):
@@ -226,7 +236,6 @@ def augment_img(img, outputs, augmenter, output_type):
             new_outputs = (outputs[0], bb_aug)
         
     return img, new_outputs
-
 
 
 # =============================================================================
