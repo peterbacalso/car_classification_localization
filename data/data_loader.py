@@ -7,6 +7,8 @@ from pathlib import Path
 from scipy.io import loadmat
 from tensorflow.data.experimental import sample_from_datasets, AUTOTUNE
 from sklearn.model_selection import train_test_split
+from imgaug import augmenters as iaa
+from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
 
 IMG_SIZE = 224
 BUFFER_SIZE = 100000
@@ -50,12 +52,44 @@ class DataLoader():
         df_test = pd.DataFrame(test_frame, columns=columns_test)
         df_test['fname'] = [f'{test_path}/{f}' 
                for f in df_test['fname']] #  Appending Path
+        
+        augmenter = iaa.Sequential([
+            #iaa.Resize({"height": IMG_SIZE, "width": IMG_SIZE}),
+            iaa.Fliplr(0.5), # horizontal flips
+            iaa.Crop(percent=(0, 0.1)), # random crops
+            # Small gaussian blur with random sigma between 0 and 0.5.
+            # But we only blur about 50% of all images.
+            iaa.Sometimes(0.5,
+                iaa.GaussianBlur(sigma=(0, 0.5))
+            ),
+            # Strengthen or weaken the contrast in each image.
+            iaa.ContrastNormalization((0.75, 1.5)),
+            # Add gaussian noise.
+            # For 50% of all images, we sample the noise once per pixel.
+            # For the other 50% of all images, we sample the noise per pixel AND
+            # channel. This can change the color (not only brightness) of the
+            # pixels.
+            iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05*255), per_channel=0.5),
+            # Make some images brighter and some darker.
+            # In 20% of all cases, we sample the multiplier once per channel,
+            # which can end up changing the color of the images.
+            iaa.Multiply((0.8, 1.2), per_channel=0.2),
+            # Apply affine transformations to each image.
+            # Scale/zoom them, translate/move them, rotate them and shear them.
+            iaa.Affine(
+                scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
+                translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)},
+                rotate=(-25, 25),
+                shear=(-8, 8)
+            )
+        ], random_order=True)
 
         self.df_train = df_train
         self.df_valid = df_valid
         self.df_test = df_test
         self.labels = labels
         self.batch_size = batch_size
+        self.augmenter = augmenter
         
     def get_pipeline(self, type='train', output='label_bbox', channels=1,
                      apply_aug=True, onehot=True, seed=None):
@@ -107,7 +141,8 @@ class DataLoader():
                 cars = df[df['label']==car_type]
                 paths = cars['fname']
                 labels = one_hot_labels[df['label']==car_type] if onehot else cars['label']
-                bbox = np.log(cars[['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2']])
+                #bbox = np.log(cars[['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2']])
+                bbox = cars[['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2']]
                 paths = tf.data.Dataset.from_tensor_slices(paths)
                 if output=='label_bbox':
                     targets = tf.data.Dataset.from_tensor_slices((
@@ -123,11 +158,20 @@ class DataLoader():
                 paths_targets = tf.data.Dataset.zip((paths, targets)).cache()
                 paths_targets = paths_targets.shuffle(BUFFER_SIZE)
                 img_targets = paths_targets.map(
-                        partial(load_and_resize_image, channels=channels),
+                        partial(load_image, channels=channels),
                         num_parallel_calls=AUTOTUNE)
                 if apply_aug:
-                    img_targets = img_targets.map(augment_img)
-                img_targets = img_targets.map(standard_scaler).repeat()
+                    img_targets = img_targets.map(
+                            partial(augment_img, 
+                                    augmenter=self.augmenter,
+                                    output_type=output))
+# =============================================================================
+#                 img_targets = paths_targets.map(
+#                         resize_image,
+#                         num_parallel_calls=AUTOTUNE)
+# =============================================================================
+                #img_targets = img_targets.map(standard_scaler).repeat()
+                img_targets = img_targets.repeat()
                 datasets.append(img_targets)
             
         num_labels = len(df['label'].unique())
@@ -147,19 +191,43 @@ def standard_scaler(img, outputs):
     img = img/255.0
     return img, outputs
 
-def load_and_resize_image(path, outputs, channels=1):
+def load_image(path, outputs, channels=1):
     img = tf.io.read_file(path)
     img = tf.image.decode_jpeg(img, channels=channels)
-    img = tf.image.resize(img, [IMG_SIZE, IMG_SIZE])
-    img = tf.cast(img, tf.float16)
+    img = tf.cast(img, tf.uint8)
     return img, outputs
 
-def augment_img(img, outputs):
-    #img = tf.image.random_flip_left_right(img)
-    #img = tf.image.random_flip_up_down(img)
-    img = tf.image.random_brightness(img, .1)
-    #img = tf.image.random_jpeg_quality(img, 50, 100)
+def augment_img(img, outputs, augmenter, output_type):
+    bbox = None
+    if output_type == 'label':
+        bbox = outputs
+    elif output_type == 'label_bbox':
+        bbox = outputs[1]
+    
+    def aug_mapper(img, bbox):
+        bb_prior = BoundingBoxesOnImage([
+            BoundingBox(x1=bbox[0], y1=bbox[1], x2=bbox[2], y2=bbox[3]),
+        ], shape=img.shape)
+        before = bb_prior.bounding_boxes[0]
+        print('bbox before', before.x1, before.y1, before.x2, before.y2)
+        img_aug, bb_aug = augmenter(images=[img], bounding_boxes=bb_prior)
+        after = bb_aug.bounding_boxes[0]
+        print('bbox after', after.x1, after.y1, after.x2, after.y2)
+        return augmenter(images=[img])
+    
+    #img = augmenter(images=img)
+    #img = tf.map_fn(augmenter)
+    img_dtype = img.dtype
+    img = tf.numpy_function(aug_mapper, [img, bbox], img_dtype)
+    
+# =============================================================================
+#     after = bb_aug.bounding_boxes[0]
+#     print('bbox after', after.x1, after.y1, after.x2, after.y2)
+# =============================================================================
+        
     return img, outputs
+
+
 
 # =============================================================================
 # HELPERS FOR TEST
