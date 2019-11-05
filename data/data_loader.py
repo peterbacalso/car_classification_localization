@@ -54,7 +54,7 @@ class DataLoader():
                for f in df_test['fname']] #  Appending Path
         
         augmenter = iaa.Sequential([
-            #iaa.Resize({"height": IMG_SIZE, "width": IMG_SIZE}),
+            iaa.Resize({"height": IMG_SIZE, "width": IMG_SIZE}),
             iaa.Fliplr(0.5), # horizontal flips
             iaa.Crop(percent=(0, 0.1)), # random crops
             # Small gaussian blur with random sigma between 0 and 0.5.
@@ -164,7 +164,8 @@ class DataLoader():
                     img_targets = img_targets.map(
                             partial(augment_img, 
                                     augmenter=self.augmenter,
-                                    output_type=output))
+                                    output_type=output),
+                            num_parallel_calls=AUTOTUNE)
 # =============================================================================
 #                 img_targets = paths_targets.map(
 #                         resize_image,
@@ -208,24 +209,20 @@ def augment_img(img, outputs, augmenter, output_type):
         bb_prior = BoundingBoxesOnImage([
             BoundingBox(x1=bbox[0], y1=bbox[1], x2=bbox[2], y2=bbox[3]),
         ], shape=img.shape)
-        before = bb_prior.bounding_boxes[0]
-        print('bbox before', before.x1, before.y1, before.x2, before.y2)
-        img_aug, bb_aug = augmenter(images=[img], bounding_boxes=bb_prior)
-        after = bb_aug.bounding_boxes[0]
-        print('bbox after', after.x1, after.y1, after.x2, after.y2)
-        return augmenter(images=[img])
+        img_aug, bb_after = augmenter(images=[img], bounding_boxes=bb_prior)
+        after = bb_after.bounding_boxes[0].clip_out_of_image(img.shape)
+        bb_aug = np.asarray([after.x1, after.y1, after.x2, after.y2])
+        bb_aug = tf.convert_to_tensor(bb_aug, dtype=tf.float16)
+        return img_aug[0], bb_aug
     
-    #img = augmenter(images=img)
-    #img = tf.map_fn(augmenter)
-    img_dtype = img.dtype
-    img = tf.numpy_function(aug_mapper, [img, bbox], img_dtype)
+    img, bb_aug = tf.numpy_function(aug_mapper, [img, bbox], (tf.uint8, tf.float16))
     
-# =============================================================================
-#     after = bb_aug.bounding_boxes[0]
-#     print('bbox after', after.x1, after.y1, after.x2, after.y2)
-# =============================================================================
+    if output_type == 'label':
+        new_outputs = bb_aug
+    elif output_type == 'label_bbox':
+        new_outputs = (outputs[0], bb_aug)
         
-    return img, outputs
+    return img, new_outputs
 
 
 

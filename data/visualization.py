@@ -57,7 +57,7 @@ def display_images(df_train, df_test, n):
     plt.show()
     
 if __name__=="__main__":
-    data = DataLoader(batch_size=1)
+    data = DataLoader(batch_size=32)
 
     df_train = data.df_train.merge(data.labels, 
                                    left_on='label', 
@@ -91,10 +91,10 @@ if __name__=="__main__":
             else Image.fromarray(img)
             plt.imshow(image)
             
-            bbox_x1 = outputs[1][0][0].numpy()
-            bbox_y1 = outputs[1][0][1].numpy()
-            bbox_x2 = outputs[1][0][2].numpy()
-            bbox_y2 = outputs[1][0][3].numpy()
+            bbox_x1 = outputs[1][i][0].numpy()
+            bbox_y1 = outputs[1][i][1].numpy()
+            bbox_x2 = outputs[1][i][2].numpy()
+            bbox_y2 = outputs[1][i][3].numpy()
             
             xy = bbox_x1, bbox_y1
             width = bbox_x2 - bbox_x1
