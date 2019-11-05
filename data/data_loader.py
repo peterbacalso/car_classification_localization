@@ -200,7 +200,7 @@ def load_image(path, outputs, channels=1):
 
 def augment_img(img, outputs, augmenter, output_type):
     bbox = None
-    if output_type == 'label':
+    if output_type == 'bbox':
         bbox = outputs
     elif output_type == 'label_bbox':
         bbox = outputs[1]
@@ -215,12 +215,15 @@ def augment_img(img, outputs, augmenter, output_type):
         bb_aug = tf.convert_to_tensor(bb_aug, dtype=tf.float16)
         return img_aug[0], bb_aug
     
-    img, bb_aug = tf.numpy_function(aug_mapper, [img, bbox], (tf.uint8, tf.float16))
-    
     if output_type == 'label':
-        new_outputs = bb_aug
-    elif output_type == 'label_bbox':
-        new_outputs = (outputs[0], bb_aug)
+        img = tf.numpy_function(augmenter.augment_image, [img], tf.uint8)
+        new_outputs = outputs
+    else:
+        img, bb_aug = tf.numpy_function(aug_mapper, [img, bbox], (tf.uint8, tf.float16))
+        if output_type == 'bbox':
+            new_outputs = bb_aug
+        elif output_type == 'label_bbox':
+            new_outputs = (outputs[0], bb_aug)
         
     return img, new_outputs
 
