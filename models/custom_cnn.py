@@ -85,8 +85,8 @@ def CNN(n_classes, lr=.001, reg=1e-6, channels=1, output="label_bbox"):
     drop_3 = Dropout(0.5)(relu_7)
     class_output = Dense(n_classes, 
                          activation="softmax", 
-                         name="classifier")(drop_3)
-    bbox_output = Dense(units=4, name="localizer")(drop_3)
+                         name="labels")(drop_3)
+    bbox_output = Dense(units=4, name="bbox")(drop_3)
     
     # Optimizer
     #optimizer = SGD(lr=.1, momentum=0.9, decay=0.01)

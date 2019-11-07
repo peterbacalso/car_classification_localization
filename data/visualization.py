@@ -69,8 +69,19 @@ if __name__=="__main__":
 #         display_image(df_train, i)
 # =============================================================================
     
-    display_image(df_train, 0)
-    display_images(df_train, data.df_test, 20)
+# =============================================================================
+#     display_image(df_train, 0)
+#     display_images(df_train, data.df_test, 20)
+# =============================================================================
+    
+    gen = data.get_pipeline(type='train',
+                            #output='bbox',
+                            apply_aug=True,
+                            channels=1)
+    
+    for inputs, outputs in gen.take(1):
+        print('inputs', inputs)
+        print('outputs', outputs)
     
 # =============================================================================
 #     # Comment out the standard scaler in data loader to use visualization code below
@@ -82,7 +93,7 @@ if __name__=="__main__":
 #     for inputs, outputs in train_gen.take(1):
 #         for i in range(inputs.numpy().shape[0]):
 #             
-#             index = np.argmax(outputs[0][i].numpy())
+#             index = np.argmax(outputs['labels'][i].numpy())
 #             title = data.labels.iloc[index]['labels']
 #             
 #             img = np.squeeze(inputs.numpy()[i], axis=2) if channels == 1 \
@@ -92,15 +103,16 @@ if __name__=="__main__":
 #             else Image.fromarray(img)
 #             plt.imshow(image)
 #             
-#             bbox_x1 = outputs[1][i][0].numpy()
-#             bbox_y1 = outputs[1][i][1].numpy()
-#             bbox_x2 = outputs[1][i][2].numpy()
-#             bbox_y2 = outputs[1][i][3].numpy()
+#             bbox_x1 = outputs['bbox'][i][0].numpy()
+#             bbox_y1 = outputs['bbox'][i][1].numpy()
+#             bbox_x2 = outputs['bbox'][i][2].numpy()
+#             bbox_y2 = outputs['bbox'][i][3].numpy()
 #             
 #             xy = bbox_x1, bbox_y1
 #             width = bbox_x2 - bbox_x1
 #             height = bbox_y2 - bbox_y1
-#             rect = Rectangle(xy, width, height, fill=False, color='r', linewidth=2)
+#             rect = Rectangle(xy, width, height, 
+#                              fill=False, color='r', linewidth=2)
 #             
 #             plt.axis('off')
 #             plt.title(title)
@@ -109,5 +121,4 @@ if __name__=="__main__":
 #             plt.show()
 # =============================================================================
             
-
 

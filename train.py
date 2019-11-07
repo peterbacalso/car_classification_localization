@@ -1,5 +1,6 @@
 import os
 import time
+import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
@@ -31,20 +32,21 @@ def load_data(output="label_bbox", channels=1):
     
     train_gen = data.get_pipeline(type='train',
                                   output=output,
-                                  apply_aug=True, # incorporate resize w/ false
+                                  apply_aug=False,
                                   channels=channels,
                                   seed=SEED)
-    steps_per_epoch = tf.math.ceil(len(data.df_train)/data.batch_size)
-    steps_per_epoch = tf.cast(steps_per_epoch, tf.int16).numpy()
+    steps_per_epoch = np.ceil(len(data.df_train)/data.batch_size)
+    #steps_per_epoch = tf.cast(steps_per_epoch, tf.int16).numpy()
     
     valid_gen = data.get_pipeline(type='validation',
                                   output=output,
                                   channels=channels,
-                                  apply_aug=True, # incorporate resize w/ false
+                                  apply_aug=False,
                                   seed=SEED)
-    validation_steps = tf.math.ceil(len(data.df_valid)/data.batch_size)
-    validation_steps = tf.cast(validation_steps, tf.int16).numpy()
+    validation_steps = np.ceil(len(data.df_valid)/data.batch_size)
+    #validation_steps = tf.cast(validation_steps, tf.int16).numpy()
     
+    #return None, None, None, None, None
     return n_classes, train_gen, steps_per_epoch, valid_gen, validation_steps
         
 

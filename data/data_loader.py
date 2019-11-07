@@ -5,7 +5,7 @@ import tensorflow as tf
 from functools import partial
 from pathlib import Path
 from scipy.io import loadmat
-from tensorflow.data.experimental import sample_from_datasets, AUTOTUNE
+from tensorflow.data.experimental import choose_from_datasets, AUTOTUNE
 from sklearn.model_selection import train_test_split
 from imgaug import augmenters as iaa
 from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
@@ -66,7 +66,7 @@ class DataLoader():
                 iaa.GaussianBlur(sigma=(0, 0.5))
             ),
             # Strengthen or weaken the contrast in each image.
-            iaa.ContrastNormalization((0.75, 1.5)),
+            iaa.LinearContrast((0.4, 1.6)),
             # Add gaussian noise.
             # For 50% of all images, we sample the noise once per pixel.
             # For the other 50% of all images, we sample the noise per pixel AND
@@ -122,7 +122,7 @@ class DataLoader():
             
         if type == 'test':
             paths = df['fname']
-            paths_targets = tf.data.Dataset.from_tensor_slices(paths).cache()
+            paths_targets = tf.data.Dataset.from_tensor_slices(paths)
             paths_targets = paths_targets.shuffle(BUFFER_SIZE)
             img_targets = paths_targets.map(
                     partial(load_and_resize_image_test, channels=channels),
@@ -132,63 +132,59 @@ class DataLoader():
                     buffer_size=AUTOTUNE)
             return ds
         else:
-            one_hot_labels = pd.get_dummies(df['label'], prefix=['label'])
-            if type=='validation':
-                # get the columns in train that are not in valid
-                one_hot_train_labels = pd.get_dummies(
-                        self.df_train['label'], prefix=['label'])
-                col_to_add = np.setdiff1d(
-                        one_hot_train_labels.columns, one_hot_labels.columns)
-                for c in col_to_add:
-                    one_hot_labels[c] = 0
-                # select and reorder the validation columns using the train columns
-                one_hot_labels = one_hot_labels[one_hot_train_labels.columns]
-
             for car_type in df['label'].unique():
                 cars = df[df['label']==car_type]
+                
                 paths = cars['fname']
-                labels = one_hot_labels[df['label']==car_type] \
-                if onehot else cars['label']
-                #bbox = np.log(cars[['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2']])
+                labels = cars['label']
                 bbox = cars[['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2']]
-                paths = tf.data.Dataset.from_tensor_slices(paths)
-                if output=='label_bbox':
-                    targets = tf.data.Dataset.from_tensor_slices((
-                        tf.cast(labels.values, tf.uint8), 
-                        tf.cast(bbox.values, tf.int16)
-                    ))
-                elif output == 'label':
-                    targets = tf.data.Dataset.from_tensor_slices(
-                            tf.cast(labels.values, tf.uint8))
-                elif output == 'bbox':
-                    targets = tf.data.Dataset.from_tensor_slices(
-                        tf.cast(bbox.values, tf.int16))
-                paths_targets = tf.data.Dataset.zip((paths, targets)).cache()
-                paths_targets = paths_targets.shuffle(BUFFER_SIZE)
-                img_targets = paths_targets.map(
-                        partial(load_image, channels=channels),
-                        num_parallel_calls=AUTOTUNE)
+                
+                paths_targets = make_ds(paths.values, 
+                                        labels.values, 
+                                        bbox.values)
+                
+                imgs_targets = paths_targets.map(
+                    partial(load_image, channels=channels),
+                    num_parallel_calls=AUTOTUNE)
+                              
                 if apply_aug:
-                    img_targets = img_targets.map(
+                    imgs_targets = imgs_targets.map(
                             partial(augment_img, 
                                     augmenter=self.augmenter,
-                                    output_type=output),
+                                    output_type=output,
+                                    num_labels=len(self.labels)),
                             num_parallel_calls=AUTOTUNE)
                 else:
-                    img_targets = img_targets.map(
+                    imgs_targets = imgs_targets.map(
                             partial(augment_img, 
                                     augmenter=self.resizer,
-                                    output_type=output),
+                                    output_type=output,
+                                    num_labels=len(self.labels)),
                             num_parallel_calls=AUTOTUNE)
-                img_targets = img_targets.map(standard_scaler).repeat()
-                #img_targets = img_targets.repeat()
-                datasets.append(img_targets)
+                            
+# =============================================================================
+#                 imgs_targets = imgs_targets.map(
+#                             partial(log_bbox, 
+#                                     output_type=output),
+#                             num_parallel_calls=AUTOTUNE)
+# =============================================================================
+                            
+                imgs_targets = imgs_targets.map(standard_scaler)
+                datasets.append(imgs_targets)
             
         num_labels = len(df['label'].unique())
         sampling_weights = np.ones(num_labels)*(1./num_labels)
+        
+        choice_dataset = tf.data.Dataset.from_tensors([0])
+        choice_dataset = choice_dataset.map(
+                lambda x: get_random_choice(sampling_weights.tolist()))
+        choice_dataset = choice_dataset.repeat()
 
-        ds = sample_from_datasets(datasets, 
-                                  weights=sampling_weights, seed=seed)
+        ds = choose_from_datasets(datasets, choice_dataset)
+# =============================================================================
+#         ds = sample_from_datasets(datasets, 
+#                                   weights=sampling_weights, seed=seed)
+# =============================================================================
         ds = ds.batch(self.batch_size).prefetch(buffer_size=AUTOTUNE)
         
         return ds    
@@ -196,6 +192,17 @@ class DataLoader():
 # =============================================================================
 # HELPER PREPROCESS FUNCTIONS
 # =============================================================================
+        
+def make_ds(paths, labels, bbox):
+  ds = tf.data.Dataset.from_tensor_slices((paths, 
+                                           {"labels": labels, 
+                                            "bbox": bbox})).cache()
+  ds = ds.shuffle(BUFFER_SIZE).repeat()
+  return ds
+
+def get_random_choice(p):
+    choice = tf.random.categorical(tf.math.log([p]), 1)
+    return tf.cast(tf.squeeze(choice), tf.int64)
 
 def standard_scaler(img, outputs):
     img = tf.cast(img, tf.float16)
@@ -208,12 +215,14 @@ def load_image(path, outputs, channels=1):
     img = tf.cast(img, tf.uint8)
     return img, outputs
 
-def augment_img(img, outputs, augmenter, output_type):
-    bbox = None
-    if output_type == 'bbox':
-        bbox = outputs
-    elif output_type == 'label_bbox':
-        bbox = outputs[1]
+def log_bbox(img, outputs, output_type):
+    new_outputs = { 'labels': outputs['labels'], 
+                    'bbox': tf.math.log(outputs['bbox']) }
+    return img, new_outputs
+
+def augment_img(img, outputs, augmenter, output_type, num_labels):
+    
+    one_hot_labels = tf.one_hot(outputs['labels'], num_labels)
     
     def aug_mapper(img, bbox):
         bb_prior = BoundingBoxesOnImage([
@@ -227,13 +236,12 @@ def augment_img(img, outputs, augmenter, output_type):
     
     if output_type == 'label':
         img = tf.numpy_function(augmenter.augment_image, [img], tf.uint8)
-        new_outputs = outputs
+        new_outputs = { 'labels': one_hot_labels, 
+                       'bbox': outputs['bbox'] }
     else:
-        img, bb_aug = tf.numpy_function(aug_mapper, [img, bbox], (tf.uint8, tf.float16))
-        if output_type == 'bbox':
-            new_outputs = bb_aug
-        elif output_type == 'label_bbox':
-            new_outputs = (outputs[0], bb_aug)
+        img, bb_aug = tf.numpy_function(aug_mapper, [img, outputs['bbox']], 
+                                        (tf.uint8, tf.float16))
+        new_outputs = { 'labels': one_hot_labels, 'bbox': bb_aug }
         
     return img, new_outputs
 
