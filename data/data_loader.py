@@ -5,10 +5,14 @@ import tensorflow as tf
 from functools import partial
 from pathlib import Path
 from scipy.io import loadmat
-from tensorflow.data.experimental import choose_from_datasets, AUTOTUNE
+from tensorflow.compat.v2.data.experimental import (
+        choose_from_datasets, AUTOTUNE
+)
 from sklearn.model_selection import train_test_split
 from imgaug import augmenters as iaa
 from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
+
+tf.compat.v1.enable_eager_execution()
 
 IMG_SIZE = 224
 BUFFER_SIZE = 100000
@@ -152,6 +156,7 @@ class DataLoader():
                             partial(augment_img, 
                                     augmenter=self.augmenter,
                                     output_type=output,
+                                    onehot=onehot,
                                     num_labels=len(self.labels)),
                             num_parallel_calls=AUTOTUNE)
                 else:
@@ -159,6 +164,7 @@ class DataLoader():
                             partial(augment_img, 
                                     augmenter=self.resizer,
                                     output_type=output,
+                                    onehot=onehot,
                                     num_labels=len(self.labels)),
                             num_parallel_calls=AUTOTUNE)
                             
@@ -169,7 +175,7 @@ class DataLoader():
 #                             num_parallel_calls=AUTOTUNE)
 # =============================================================================
                             
-                imgs_targets = imgs_targets.map(standard_scaler)
+                #imgs_targets = imgs_targets.map(standard_scaler)
                 datasets.append(imgs_targets)
             
         num_labels = len(df['label'].unique())
@@ -220,9 +226,10 @@ def log_bbox(img, outputs, output_type):
                     'bbox': tf.math.log(outputs['bbox']) }
     return img, new_outputs
 
-def augment_img(img, outputs, augmenter, output_type, num_labels):
+def augment_img(img, outputs, augmenter, output_type, onehot, num_labels):
     
-    one_hot_labels = tf.one_hot(outputs['labels'], num_labels)
+    labels = tf.one_hot(outputs['labels'], num_labels) if onehot \
+    else outputs['labels']
     
     def aug_mapper(img, bbox):
         bb_prior = BoundingBoxesOnImage([
@@ -236,12 +243,13 @@ def augment_img(img, outputs, augmenter, output_type, num_labels):
     
     if output_type == 'label':
         img = tf.numpy_function(augmenter.augment_image, [img], tf.uint8)
-        new_outputs = { 'labels': one_hot_labels, 
+        new_outputs = { 'labels': labels, 
                        'bbox': outputs['bbox'] }
     else:
         img, bb_aug = tf.numpy_function(aug_mapper, [img, outputs['bbox']], 
                                         (tf.uint8, tf.float16))
-        new_outputs = { 'labels': one_hot_labels, 'bbox': bb_aug }
+        new_outputs = { 'labels': labels, 
+                       'bbox': bb_aug }
         
     return img, new_outputs
 
