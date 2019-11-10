@@ -1,12 +1,15 @@
 import tensorflow as tf
 from tensorflow.keras.layers import (
-        Layer, Conv2D, BatchNormalization,
+        Layer, Conv2D, BatchNormalization, LeakyReLU
 )
 
 class Residual(Layer):
     def __init__(self, filters, strides=1, activation='relu', **kwargs):
         super().__init__(**kwargs)
-        self.activation = tf.keras.activations.get(activation)
+        if activation == 'leaky_relu':
+            self.activation = LeakyReLU(0.2)
+        else:
+            self.activation = tf.keras.activations.get(activation)
         self.main_layers = [
                 Conv2D(filters, kernel_size=3, 
                        strides=strides, padding="same", use_bias=False),

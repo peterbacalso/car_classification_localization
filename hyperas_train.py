@@ -11,7 +11,8 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (
     Input, Conv2D, Dense, MaxPooling2D, 
     Flatten, Dropout, BatchNormalization,
-    Activation, GlobalAvgPool2D
+    Activation, AveragePooling2D, GlobalAvgPool2D,
+    LeakyReLU
 )
 from layers.Residual import Residual
 from tensorflow.keras.callbacks import (

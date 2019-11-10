@@ -7,7 +7,8 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (
     Input, Conv2D, Dense, MaxPooling2D, 
     Flatten, Dropout, BatchNormalization,
-    Activation, AveragePooling2D, GlobalAvgPool2D
+    Activation, AveragePooling2D, GlobalAvgPool2D,
+    LeakyReLU
 )
 from layers.Residual import Residual
 from tensorflow.keras.callbacks import (
@@ -58,6 +59,7 @@ def model(train_gen, valid_gen):
                             kernel_size=3,
                             kernel_initializer="he_normal",
                             kernel_regularizer=l2({{uniform(1e-5, 1)}}),
+                            # activation="relu",
                             padding="same")
     
     input = Input(shape=(224,224,channels))
@@ -96,10 +98,16 @@ def model(train_gen, valid_gen):
     
     conv = DefaultConv2D(filters=64, strides=2)(input)
     norm = BatchNormalization()(conv)
-    act = Activation(activation=choice_activation)(norm)
+    if choice_activation == 'relu':
+        act = Activation(activation="relu")(norm)
+    else:
+        act = LeakyReLU(0.2)(norm)
     conv = DefaultConv2D(filters=64)(act)
     norm = BatchNormalization()(conv)
-    act = Activation(activation=choice_activation)(norm)
+    if choice_activation == 'relu':
+        act = Activation(activation="relu")(norm)
+    else:
+        act = LeakyReLU(0.2)(norm)
     
     choice_pool = {{choice(['max', 'avg'])}}
     if choice_pool == 'max':
@@ -129,17 +137,23 @@ def model(train_gen, valid_gen):
     drop = Dropout({{uniform(0, .5)}})(x)
     dense = Dense(512)(drop)
     norm = BatchNormalization()(dense)
-    x = Activation(activation=choice_activation)(norm)
+    if choice_activation == 'relu':
+        act = Activation(activation="relu")(norm)
+    else:
+        act = LeakyReLU(0.2)(norm)
     
     # If we choose 'one', add an additional dense layer
     choice_dense = {{choice(['yes', 'no'])}}
     if choice_dense == 'yes':
-        drop = Dropout({{uniform(0, .5)}})(x)
+        drop = Dropout({{uniform(0, .5)}})(act)
         dense = Dense(256)(drop)
         norm = BatchNormalization()(dense)
-        x = Activation(activation=choice_activation)(norm)
+        if choice_activation == 'relu':
+            act = Activation(activation="relu")(norm)
+        else:
+            act = LeakyReLU(0.2)(norm)
 
-    drop = Dropout({{uniform(0, .5)}})(x)
+    drop = Dropout({{uniform(0, .5)}})(act)
     class_output = Dense(n_classes, 
                          activation="softmax", 
                          name="labels")(drop)
