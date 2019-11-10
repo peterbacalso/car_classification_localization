@@ -11,8 +11,9 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (
     Input, Conv2D, Dense, MaxPooling2D, 
     Flatten, Dropout, BatchNormalization,
-    Activation
+    Activation, GlobalAvgPool2D
 )
+from layers.Residual import Residual
 from tensorflow.keras.callbacks import (
         TensorBoard, EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 )
@@ -32,10 +33,9 @@ clear_session() # Clear models from previous sessions
 
 def data():
     output="label_bbox"
-    channels=1
+    channels=3
     BATCH_SIZE=32
     SEED=23
-    CHANNELS=1
     
     data = DataLoader('./data/cars_train', 
                   './data/cars_test', 
@@ -51,7 +51,7 @@ def data():
     valid_gen = data.get_pipeline(type='validation',
                                   output=output,
                                   channels=channels,
-                                  apply_aug=False,
+                                  apply_aug=True,
                                   seed=SEED)
 
     return train_gen, valid_gen
@@ -74,12 +74,12 @@ if __name__=="__main__":
     best_run, best_model = optim.minimize(model=model,
                                           data=data,
                                           algo=tpe.suggest,
-                                          max_evals=2,
+                                          max_evals=20,
                                           trials=Trials())
 
     print("Evaluation of best performing model:")
     print('loss, labels_loss, bbox_loss, labels_acc, bbox_acc')
-    print(best_model.evaluate_generator(validation_generator, steps=1))
+    print(best_model.evaluate_generator(validation_generator, steps=51))
     print("Best performing model chosen hyper-parameters:")
     print(best_run)
 

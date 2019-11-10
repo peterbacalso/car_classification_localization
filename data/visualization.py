@@ -86,10 +86,10 @@ if __name__=="__main__":
 # =============================================================================
     
     # Comment out the standard scaler in data loader to use visualization code below
-    channels=1
+    channels=3
     
     train_gen = data.get_pipeline(type='train',
-                                  apply_aug=False,
+                                  apply_aug=True,
                                   channels=channels)
     for inputs, outputs in train_gen.take(1):
         for i in range(inputs.numpy().shape[0]):

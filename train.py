@@ -3,6 +3,7 @@ import time
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
+#import wandb
 
 from tensorflow.keras.callbacks import (
         TensorBoard, EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
@@ -19,7 +20,7 @@ clear_session() # Clear models from previous sessions
 
 BATCH_SIZE=32
 SEED=23
-CHANNELS=1
+CHANNELS=3
 
 def load_data(output="label_bbox", channels=1):
     
@@ -32,7 +33,7 @@ def load_data(output="label_bbox", channels=1):
     
     train_gen = data.get_pipeline(type='train',
                                   output=output,
-                                  apply_aug=False,
+                                  apply_aug=True,
                                   channels=channels,
                                   seed=SEED)
     steps_per_epoch = np.ceil(len(data.df_train)/data.batch_size)
@@ -41,7 +42,7 @@ def load_data(output="label_bbox", channels=1):
     valid_gen = data.get_pipeline(type='validation',
                                   output=output,
                                   channels=channels,
-                                  apply_aug=False,
+                                  apply_aug=True,
                                   seed=SEED)
     validation_steps = np.ceil(len(data.df_valid)/data.batch_size)
     #validation_steps = tf.cast(validation_steps, tf.int16).numpy()
@@ -51,6 +52,7 @@ def load_data(output="label_bbox", channels=1):
         
 
 def get_callbacks():
+    #wandb.init(config=tf.flags.FLAGS, sync_tensorboard=True)
     
     # Tensorboard
     root_logdir = os.path.join(os.curdir, 'logs')
@@ -68,13 +70,15 @@ def get_callbacks():
         verbose=1, save_best_only=True)
     
     #Reduce LR on Plateau
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', 
-                                  factor=0.2,
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss',
+                                  factor=0.3,
                                   patience=5, 
-                                  min_lr=0.001, 
+                                  min_lr=0.0001, 
                                   verbose=1)
     
-    return [tensorboard, early_stopping, checkpoint, reduce_lr]
+    return []
+    #return [early_stopping, reduce_lr]
+    #return [tensorboard, early_stopping, checkpoint, reduce_lr]
         
     
 
@@ -88,26 +92,34 @@ if __name__=="__main__":
     lr=1e-3
     reg=1e-5
     
-    print(f'Learning Rate {lr}, L2 Reg: {reg}')
-    
     # Classification Only
     # model = CNN_3(n_classes, channels=CHANNELS, output="label")
     # model = CNN(n_classes, lr=lr, reg=reg, channels=CHANNELS, output="label")
     # Bounding Box Only
     # model = CNN(n_classes, lr=lr, reg=reg, channels=CHANNELS, output="bbox")
     # Classification and Bounding Box
+    
+    #for lr in [1e-3, 3e-3, 1e-2]:
+    print(f'Learning Rate {lr}, L2 Reg: {reg}')
+    
     model = CNN(n_classes, lr=lr, reg=reg, channels=CHANNELS)
 
     history_clf = model.fit(
         train_gen,
-        epochs=300,
+        epochs=100,
         steps_per_epoch=steps_per_epoch,
         validation_data=valid_gen,
         validation_steps=validation_steps,
         callbacks=callbacks,
         verbose=1)
     
-    # del model
+    print(history_clf.history)
+    validation_labels_loss = np.amin(history_clf.history['val_labels_loss']) 
+    print('Best validation labels loss:', validation_labels_loss)
+    labels_loss = np.amin(history_clf.history['labels_loss']) 
+    print('Best labels loss:', labels_loss)
+
+    del model
     clear_session()
 
 

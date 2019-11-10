@@ -84,10 +84,10 @@ class DataLoader():
             # Apply affine transformations to each image.
             # Scale/zoom them, translate/move them, rotate them and shear them.
             iaa.Affine(
-                scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
-                translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)},
-                rotate=(-25, 25),
-                shear=(-8, 8)
+                scale={"x": (0.9, 1.1), "y": (0.9, 1.1)},
+                translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)},
+                #rotate=(-25, 25),
+                #shear=(-8, 8)
             )
         ], random_order=True)
 
@@ -136,7 +136,9 @@ class DataLoader():
                     buffer_size=AUTOTUNE)
             return ds
         else:
-            for car_type in df['label'].unique():
+            distinct_labels = df['label'].unique()
+            num_labels = len(distinct_labels)
+            for car_type in distinct_labels:
                 cars = df[df['label']==car_type]
                 
                 paths = cars['fname']
@@ -157,7 +159,7 @@ class DataLoader():
                                     augmenter=self.augmenter,
                                     output_type=output,
                                     onehot=onehot,
-                                    num_labels=len(self.labels)),
+                                    num_labels=num_labels),
                             num_parallel_calls=AUTOTUNE)
                 else:
                     imgs_targets = imgs_targets.map(
@@ -165,7 +167,7 @@ class DataLoader():
                                     augmenter=self.resizer,
                                     output_type=output,
                                     onehot=onehot,
-                                    num_labels=len(self.labels)),
+                                    num_labels=num_labels),
                             num_parallel_calls=AUTOTUNE)
                             
 # =============================================================================
@@ -175,7 +177,7 @@ class DataLoader():
 #                             num_parallel_calls=AUTOTUNE)
 # =============================================================================
                             
-                #imgs_targets = imgs_targets.map(standard_scaler)
+                imgs_targets = imgs_targets.map(standard_scaler)
                 datasets.append(imgs_targets)
             
         num_labels = len(df['label'].unique())
