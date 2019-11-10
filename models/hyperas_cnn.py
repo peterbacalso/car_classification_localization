@@ -7,7 +7,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (
     Input, Conv2D, Dense, MaxPooling2D, 
     Flatten, Dropout, BatchNormalization,
-    Activation, GlobalAvgPool2D
+    Activation, AveragePooling2D, GlobalAvgPool2D
 )
 from layers.Residual import Residual
 from tensorflow.keras.callbacks import (
@@ -58,7 +58,6 @@ def model(train_gen, valid_gen):
                             kernel_size=3,
                             kernel_initializer="he_normal",
                             kernel_regularizer=l2({{uniform(1e-5, 1)}}),
-                            # activation="relu",
                             padding="same")
     
     input = Input(shape=(224,224,channels))
@@ -93,44 +92,52 @@ def model(train_gen, valid_gen):
 #     flatten = Flatten()(max_pool_3)
 # =============================================================================
 
+    choice_activation = {{choice(['relu', 'leaky_relu'])}}
+    
     conv = DefaultConv2D(filters=64, strides=2)(input)
     norm = BatchNormalization()(conv)
-    relu = Activation(activation="relu")(norm)
-    conv = DefaultConv2D(filters=64)(relu)
+    act = Activation(activation=choice_activation)(norm)
+    conv = DefaultConv2D(filters=64)(act)
     norm = BatchNormalization()(conv)
-    relu = Activation(activation="relu")(norm)
+    act = Activation(activation=choice_activation)(norm)
     
-    x = MaxPooling2D(pool_size=2)(relu)
+    choice_pool = {{choice(['max', 'avg'])}}
+    if choice_pool == 'max':
+        x = MaxPooling2D(pool_size=2)(act)
+    else:
+        x = AveragePooling2D(pool_size=2)(act)
 
     for filters in [64] * 3:
-        x = Residual(filters)(x)
-    
-    x = Residual(128, strides=2)(x)
-    for filters in [128] * 2:
-        x = Residual(filters)(x)
-    
-    x = Residual(256, strides=2)(x)
-    for filters in [256] * 2:
-        x = Residual(filters)(x)
+        x = Residual(filters, activation=choice_activation)(x)
         
-    x = Residual(512, strides=2)(x)
+    res_block_depth_1 = {{choice([2, 3])}}
+    x = Residual(128, strides=2, activation=choice_activation)(x)
+    for filters in [128] * res_block_depth_1:
+        x = Residual(filters, activation=choice_activation)(x)
+    
+    res_block_depth_2 = {{choice([4, 5])}}
+    x = Residual(256, strides=2, activation=choice_activation)(x)
+    for filters in [256] * res_block_depth_2:
+        x = Residual(filters, activation=choice_activation)(x)
+        
+    x = Residual(512, strides=2, activation=choice_activation)(x)
     for filters in [512] * 2:
-        x = Residual(filters)(x)
+        x = Residual(filters, activation=choice_activation)(x)
         
     x = GlobalAvgPool2D()(x)
     
     drop = Dropout({{uniform(0, .5)}})(x)
     dense = Dense(512)(drop)
     norm = BatchNormalization()(dense)
-    x = Activation(activation="relu")(norm)
+    x = Activation(activation=choice_activation)(norm)
     
     # If we choose 'one', add an additional dense layer
-    choice_dense = {{choice(['one', 'two'])}}
-    if choice_dense == 'one':
+    choice_dense = {{choice(['yes', 'no'])}}
+    if choice_dense == 'yes':
         drop = Dropout({{uniform(0, .5)}})(x)
         dense = Dense(256)(drop)
         norm = BatchNormalization()(dense)
-        x = Activation(activation="relu")(norm)
+        x = Activation(activation=choice_activation)(norm)
 
     drop = Dropout({{uniform(0, .5)}})(x)
     class_output = Dense(n_classes, 
