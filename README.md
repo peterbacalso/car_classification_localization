@@ -35,11 +35,13 @@ This step was done to help monitor training and adjust hyperparameters to get go
 The entire dataset has 196 classes which means the softmax loss should be approximately ln(196)=5.278. After running one epoch on a neural net with 1 hidden layer, the loss did in fact match.
 ```
 217/217 [==============================] - 17s 80ms/step - loss: 5.2780 - accuracy: 0.0049 - val_loss: 5.2947 - val_accuracy: 0.0032
-T
-he same process was repeated for a subset of the dataset using 2 labels. The loss should be ln(2)=0.693.
+```
+The same process was repeated for a subset of the dataset using 2 labels. The loss should be ln(2)=0.693.
+```
 3/3 [==============================] - 1s 233ms/step - loss: 0.6933 - accuracy: 0.5625 - val_loss: 0.5985 - val_accuracy: 0.6875
-2. A
-dding regularization should make the loss go up. The following test adds l2 regularization of magnitude 1e2 which made the loss jump from 0.693 to 2.9.
+```
+2. Adding regularization should make the loss go up. The following test adds l2 regularization of magnitude 1e2 which made the loss jump from 0.693 to 2.9.
+```
 3/3
  [==============================] - 1s 322ms/step - loss: 2.9040 - accuracy: 0.4375 - val_loss: 2.9195 - val_accuracy: 0.6875
 ```
@@ -50,8 +52,7 @@ l Architecture
 
 1. Train on a small subset of data (eg. 20 samples) which should be easy to overfit and get a high training accuracy. The subset size used for this step was 73 images over 2 classes and ran for 200 epochs that resulted in 100% classifier accuracy.
 ```
-Epoch 
-197/200
+Epoch 197/200
 3/3 [==============================] - 3s 1s/step - loss: 0.0555 - classifier_loss: 0.0281 - localizer_loss: 0.1651 - classifier_accuracy: 1.0000 - localizer_accuracy: 0.4271 - val_loss: 15.2211 - val_classifier_loss: 11.0812 - val_localizer_loss: 31.7805 - val_classifier_accuracy: 0.3125 - val_localizer_accuracy: 0.8125
 Epoch 198/200
 3/3 [==============================] - 3s 1s/step - loss: 0.0425 - classifier_loss: 0.0163 - localizer_loss: 0.1473 - classifier_accuracy: 1.0000 - localizer_accuracy: 0.4479 - val_loss: 15.2499 - val_classifier_loss: 11.0812 - val_localizer_loss: 31.9246 - val_classifier_accuracy: 0.3125 - val_localizer_accuracy: 0.9062
