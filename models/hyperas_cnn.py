@@ -196,7 +196,7 @@ def model(train_gen, valid_gen):
         validation_data=valid_gen,
         validation_steps=validation_steps,
         callbacks=callbacks,
-        verbose=2)
+        verbose=1)
     
 # =============================================================================
 #     #print(model.metrics_names)

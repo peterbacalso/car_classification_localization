@@ -3,8 +3,9 @@ import time
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-#import wandb
+import wandb
 
+from wandb.keras import WandbCallback
 from tensorflow.keras.callbacks import (
         TensorBoard, EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 )
@@ -42,18 +43,16 @@ def load_data(output="label_bbox", channels=1):
     valid_gen = data.get_pipeline(type='validation',
                                   output=output,
                                   channels=channels,
-                                  apply_aug=True,
+                                  apply_aug=False,
                                   seed=SEED)
     validation_steps = np.ceil(len(data.df_valid)/data.batch_size)
     #validation_steps = tf.cast(validation_steps, tf.int16).numpy()
     
     #return None, None, None, None, None
-    return n_classes, train_gen, steps_per_epoch, valid_gen, validation_steps
+    return data.labels, n_classes, train_gen, steps_per_epoch, valid_gen, validation_steps
         
 
-def get_callbacks():
-    #wandb.init(config=tf.flags.FLAGS, sync_tensorboard=True)
-    
+def get_callbacks():   
     # Tensorboard
     root_logdir = os.path.join(os.curdir, 'logs')
     run_id = time.strftime(f"run_%Y_%m_%d-%H_%M_%S")
@@ -85,9 +84,16 @@ def get_callbacks():
 
 if __name__=="__main__":
     
-    n_classes, train_gen, steps_per_epoch, \
+    labels, n_classes, train_gen, steps_per_epoch, \
     valid_gen, validation_steps = load_data(channels=CHANNELS)
+    
+    #wandb.init(config=tf.flags.FLAGS, sync_tensorboard=True)
+    
+    run = wandb.init(project="test_wandb")
+    config = run.config
+    config.epochs = 1
     callbacks = get_callbacks()
+    callbacks.append(WandbCallback(labels=labels))
     
     lr=1e-3
     reg=1e-5
@@ -106,7 +112,8 @@ if __name__=="__main__":
 
     history_clf = model.fit(
         train_gen,
-        epochs=100,
+        epochs=config.epochs,
+        #epochs=1,
         steps_per_epoch=steps_per_epoch,
         validation_data=valid_gen,
         validation_steps=validation_steps,
