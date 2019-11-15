@@ -6,8 +6,12 @@ from functools import partial
 from pathlib import Path
 from scipy.io import loadmat
 from tensorflow.compat.v2.data.experimental import (
-        choose_from_datasets, AUTOTUNE
+        choose_from_datasets, AUTOTUNE, sample_from_datasets
 )
+from tensorflow.keras.applications.resnet50 \
+import preprocess_input as preproc_rn
+from tensorflow.keras.applications.mobilenet_v2 \
+import preprocess_input as preproc_mn
 from sklearn.model_selection import train_test_split
 from imgaug import augmenters as iaa
 from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
@@ -86,8 +90,8 @@ class DataLoader():
             iaa.Affine(
                 scale={"x": (0.9, 1.1), "y": (0.9, 1.1)},
                 translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)},
-                #rotate=(-25, 25),
-                #shear=(-8, 8)
+                rotate=(-15, 15),
+                shear=(-4, 4)
             )
         ], random_order=True)
 
@@ -100,7 +104,8 @@ class DataLoader():
         self.resizer = resizer
         
     def get_pipeline(self, type='train', output='label_bbox', channels=1,
-                     apply_aug=True, onehot=True, seed=None):
+                     apply_aug=True, onehot=True, seed=None, 
+                     apply_tl_preprocess=False, model_type="resnet"):
         '''
         Input:
             type:           Can be 'train', 'validation', or 'test'
@@ -137,7 +142,8 @@ class DataLoader():
             return ds
         else:
             distinct_labels = df['label'].unique()
-            num_labels = len(distinct_labels)
+            #num_labels = len(distinct_labels) # risk of val and train not matching
+            num_labels = len(self.labels)
             for car_type in distinct_labels:
                 cars = df[df['label']==car_type]
                 
@@ -147,7 +153,8 @@ class DataLoader():
                 
                 paths_targets = make_ds(paths.values, 
                                         labels.values, 
-                                        bbox.values)
+                                        bbox.values,
+                                        seed=seed)
                 
                 imgs_targets = paths_targets.map(
                     partial(load_image, channels=channels),
@@ -176,23 +183,30 @@ class DataLoader():
 #                                     output_type=output),
 #                             num_parallel_calls=AUTOTUNE)
 # =============================================================================
-                            
-                imgs_targets = imgs_targets.map(standard_scaler)
+
+                if not apply_tl_preprocess:
+                    imgs_targets = imgs_targets.map(standard_scaler, 
+                                                    num_parallel_calls=AUTOTUNE)
                 datasets.append(imgs_targets)
             
         num_labels = len(df['label'].unique())
         sampling_weights = np.ones(num_labels)*(1./num_labels)
         
-        choice_dataset = tf.data.Dataset.from_tensors([0])
-        choice_dataset = choice_dataset.map(
-                lambda x: get_random_choice(sampling_weights.tolist()))
-        choice_dataset = choice_dataset.repeat()
-
-        ds = choose_from_datasets(datasets, choice_dataset)
 # =============================================================================
-#         ds = sample_from_datasets(datasets, 
-#                                   weights=sampling_weights, seed=seed)
+#         choice_dataset = tf.data.Dataset.from_tensors([0])
+#         choice_dataset = choice_dataset.map(
+#                 lambda x: get_random_choice(sampling_weights.tolist()))
+#         choice_dataset = choice_dataset.repeat()
+# 
+#         ds = choose_from_datasets(datasets, choice_dataset)
 # =============================================================================
+        
+        ds = sample_from_datasets(datasets, 
+                                  weights=sampling_weights, seed=seed)
+        if apply_tl_preprocess:
+            ds = ds.map(partial(preprocess, 
+                                model_type=model_type),
+                        num_parallel_calls=AUTOTUNE)
         ds = ds.batch(self.batch_size).prefetch(buffer_size=AUTOTUNE)
         
         return ds    
@@ -200,12 +214,21 @@ class DataLoader():
 # =============================================================================
 # HELPER PREPROCESS FUNCTIONS
 # =============================================================================
-        
-def make_ds(paths, labels, bbox):
+     
+def preprocess(img, outputs, model_type):
+    img = tf.dtypes.cast(img, tf.float32)
+    if model_type == "resnet":
+        img = tf.numpy_function(preproc_rn, [img], tf.float32)
+    elif model_type == "mobilenet":
+        img = tf.numpy_function(preproc_mn, [img], tf.float32)
+    #img = preprocess_input(img)
+    return img, outputs   
+    
+def make_ds(paths, labels, bbox, seed):
   ds = tf.data.Dataset.from_tensor_slices((paths, 
                                            {"labels": labels, 
                                             "bbox": bbox})).cache()
-  ds = ds.shuffle(BUFFER_SIZE).repeat()
+  ds = ds.shuffle(BUFFER_SIZE, seed=seed).repeat()
   return ds
 
 def get_random_choice(p):

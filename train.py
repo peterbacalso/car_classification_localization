@@ -1,5 +1,4 @@
 import os
-import time
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -7,28 +6,25 @@ import wandb
 
 from wandb.keras import WandbCallback
 from tensorflow.keras.callbacks import (
-        TensorBoard, EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+        EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 )
 from tensorflow.keras.backend import clear_session
 
 from data.data_loader import DataLoader
 from models.custom_cnn import CNN
 from models.three_cnn_layer import CNN_3
+from models.transfer_learning import TL
 
 clear_session() # Clear models from previous sessions
 
-# CONSTANTS
 
-BATCH_SIZE=32
-SEED=23
-CHANNELS=3
-
-def load_data(output="label_bbox", channels=1):
+def load_data(output="label_bbox", batch_size=32, channels=1, 
+              apply_tl_preprocess=False, model_type="resnet", seed=23):
     
     data = DataLoader('./data/cars_train', 
                   './data/cars_test', 
                   './data/devkit', 
-                  batch_size=BATCH_SIZE)
+                  batch_size=batch_size)
     n_classes = len(data.df_train['label'].unique())
     print(f'{n_classes} CLASSES, Random Chance: {1/n_classes}')
     
@@ -36,31 +32,39 @@ def load_data(output="label_bbox", channels=1):
                                   output=output,
                                   apply_aug=True,
                                   channels=channels,
-                                  seed=SEED)
+                                  apply_tl_preprocess=apply_tl_preprocess,
+                                  model_type=model_type,
+                                  seed=seed)
     steps_per_epoch = np.ceil(len(data.df_train)/data.batch_size)
-    #steps_per_epoch = tf.cast(steps_per_epoch, tf.int16).numpy()
     
     valid_gen = data.get_pipeline(type='validation',
                                   output=output,
                                   channels=channels,
                                   apply_aug=False,
-                                  seed=SEED)
+                                  apply_tl_preprocess=apply_tl_preprocess,
+                                  model_type=model_type,
+                                  seed=seed)
     validation_steps = np.ceil(len(data.df_valid)/data.batch_size)
-    #validation_steps = tf.cast(validation_steps, tf.int16).numpy()
-    
-    #return None, None, None, None, None
-    return data.labels, n_classes, train_gen, steps_per_epoch, valid_gen, validation_steps
+
+    return n_classes, train_gen, steps_per_epoch, valid_gen, validation_steps
         
 
-def get_callbacks():   
-    # Tensorboard
-    root_logdir = os.path.join(os.curdir, 'logs')
-    run_id = time.strftime(f"run_%Y_%m_%d-%H_%M_%S")
-    run_logdir = os.path.join(root_logdir, run_id)
-    tensorboard = TensorBoard(run_logdir)
+def get_callbacks(early_stopping_patience, 
+                  reduce_lr_on_plateau_factor,
+                  reduce_lr_on_plateau_patience,
+                  reduce_lr_on_plateau_min_lr):   
+# =============================================================================
+#     # Tensorboard
+#     root_logdir = os.path.join(os.curdir, 'logs')
+#     run_id = time.strftime(f"run_%Y_%m_%d-%H_%M_%S")
+#     run_logdir = os.path.join(root_logdir, run_id)
+#     tensorboard = TensorBoard(run_logdir)
+# =============================================================================
+    wandb_cb = WandbCallback()
     
     # Early Stopping
-    early_stopping = EarlyStopping(patience=10, restore_best_weights=True)
+    early_stopping = EarlyStopping(patience=early_stopping_patience, 
+                                   restore_best_weights=True)
     
      # Model Checkpoints
     checkpoint = ModelCheckpoint(
@@ -70,33 +74,55 @@ def get_callbacks():
     
     #Reduce LR on Plateau
     reduce_lr = ReduceLROnPlateau(monitor='val_loss',
-                                  factor=0.3,
-                                  patience=5, 
-                                  min_lr=0.0001, 
+                                  factor=reduce_lr_on_plateau_factor,
+                                  patience=reduce_lr_on_plateau_patience, 
+                                  min_lr=reduce_lr_on_plateau_min_lr, 
                                   verbose=1)
     
-    return []
-    #return [early_stopping, reduce_lr]
-    #return [tensorboard, early_stopping, checkpoint, reduce_lr]
+    return [wandb_cb, early_stopping, checkpoint, reduce_lr]
         
     
 
 
 if __name__=="__main__":
     
-    labels, n_classes, train_gen, steps_per_epoch, \
-    valid_gen, validation_steps = load_data(channels=CHANNELS)
     
-    #wandb.init(config=tf.flags.FLAGS, sync_tensorboard=True)
     
-    run = wandb.init(project="test_wandb")
-    config = run.config
-    config.epochs = 1
-    callbacks = get_callbacks()
-    callbacks.append(WandbCallback(labels=labels))
+    wandb.init(config={
+            "epochs": 50,
+            "optimizer": "adam",
+            "learning_rate": 1e-3,
+            "dropout_chance": 0.7,
+            "reduce_lr_on_plateau_min_lr": 1e-4,
+            "reduce_lr_on_plateau_factor": .33333,
+            "reduce_lr_on_plateau_patience": 5,
+            "l2_reg": 3e-3,
+            "num_frozen_layers": 123, # 103, 116, 123, 143
+            "batch_size": 32,
+            "channels": 3,
+            "random_seed": 23,
+            "early_stopping_patience": 10,
+            "transfer_learning": True,
+            "transfer_learning_model": "resnet"
+            })
+    config = wandb.config
     
-    lr=1e-3
-    reg=1e-5
+    callbacks = get_callbacks(
+            early_stopping_patience=config.early_stopping_patience,
+            reduce_lr_on_plateau_factor=config.reduce_lr_on_plateau_factor,
+            reduce_lr_on_plateau_patience=config.reduce_lr_on_plateau_patience,
+            reduce_lr_on_plateau_min_lr=config.reduce_lr_on_plateau_min_lr
+            )
+    
+    n_classes, train_gen, steps_per_epoch, \
+    valid_gen, validation_steps = \
+    load_data(batch_size=config.batch_size, 
+              channels=config.channels,
+              apply_tl_preprocess=config.transfer_learning,
+              model_type=config.transfer_learning_model,
+              seed=config.random_seed)
+    
+    config.num_classes = n_classes
     
     # Classification Only
     # model = CNN_3(n_classes, channels=CHANNELS, output="label")
@@ -106,25 +132,32 @@ if __name__=="__main__":
     # Classification and Bounding Box
     
     #for lr in [1e-3, 3e-3, 1e-2]:
-    print(f'Learning Rate {lr}, L2 Reg: {reg}')
     
-    model = CNN(n_classes, lr=lr, reg=reg, channels=CHANNELS)
+    model = TL(n_classes, 
+               optimizer_type=config.optimizer,
+               lr=config.learning_rate, 
+               reg=config.l2_reg,
+               num_frozen_layers=config.num_frozen_layers,
+               dropout_chance=config.dropout_chance,
+               channels=config.channels)
 
     history_clf = model.fit(
         train_gen,
         epochs=config.epochs,
-        #epochs=1,
         steps_per_epoch=steps_per_epoch,
         validation_data=valid_gen,
         validation_steps=validation_steps,
         callbacks=callbacks,
         verbose=1)
     
-    print(history_clf.history)
+    #print(history_clf.history)
     validation_labels_loss = np.amin(history_clf.history['val_labels_loss']) 
     print('Best validation labels loss:', validation_labels_loss)
     labels_loss = np.amin(history_clf.history['labels_loss']) 
     print('Best labels loss:', labels_loss)
+    
+    #wandb.save('./checkpoints/*')
+    wandb.save("../checkpoints/*")
 
     del model
     clear_session()
