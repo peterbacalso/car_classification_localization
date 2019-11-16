@@ -55,7 +55,6 @@ class DataLoader():
         
         test_frame = [[i.flat[0] for i in line] 
                 for line in test_annos['annotations'][0]]
-        
         columns_test = ['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2', 'fname']
         df_test = pd.DataFrame(test_frame, columns=columns_test)
         df_test['fname'] = [f'{test_path}/{f}' 
@@ -104,7 +103,7 @@ class DataLoader():
         self.resizer = resizer
         
     def get_pipeline(self, type='train', output='label_bbox', channels=1,
-                     apply_aug=True, onehot=True, seed=None, 
+                     apply_aug=True, onehot=True, seed=None, scale=False,
                      apply_tl_preprocess=False, model_type="resnet"):
         '''
         Input:
@@ -154,6 +153,7 @@ class DataLoader():
                 paths_targets = make_ds(paths.values, 
                                         labels.values, 
                                         bbox.values,
+                                        output=output,
                                         seed=seed)
                 
                 imgs_targets = paths_targets.map(
@@ -177,14 +177,7 @@ class DataLoader():
                                     num_labels=num_labels),
                             num_parallel_calls=AUTOTUNE)
                             
-# =============================================================================
-#                 imgs_targets = imgs_targets.map(
-#                             partial(log_bbox, 
-#                                     output_type=output),
-#                             num_parallel_calls=AUTOTUNE)
-# =============================================================================
-
-                if not apply_tl_preprocess:
+                if not apply_tl_preprocess and scale:
                     imgs_targets = imgs_targets.map(standard_scaler, 
                                                     num_parallel_calls=AUTOTUNE)
                 datasets.append(imgs_targets)
@@ -224,12 +217,17 @@ def preprocess(img, outputs, model_type):
     #img = preprocess_input(img)
     return img, outputs   
     
-def make_ds(paths, labels, bbox, seed):
-  ds = tf.data.Dataset.from_tensor_slices((paths, 
-                                           {"labels": labels, 
-                                            "bbox": bbox})).cache()
-  ds = ds.shuffle(BUFFER_SIZE, seed=seed).repeat()
-  return ds
+def make_ds(paths, labels, bbox, output, seed):
+    if output == "label_bbox":
+        ds = tf.data.Dataset.from_tensor_slices((paths, 
+                                                 {"labels": labels, 
+                                                  "bbox": bbox})).cache()
+    elif output == "label":
+        ds = tf.data.Dataset.from_tensor_slices((paths, labels)).cache()
+    elif output == "bbox":
+        ds = tf.data.Dataset.from_tensor_slices((paths, bbox)).cache()
+    ds = ds.shuffle(BUFFER_SIZE, seed=seed).repeat()
+    return ds
 
 def get_random_choice(p):
     choice = tf.random.categorical(tf.math.log([p]), 1)
@@ -253,9 +251,11 @@ def log_bbox(img, outputs, output_type):
 
 def augment_img(img, outputs, augmenter, output_type, onehot, num_labels):
     
-    labels = tf.one_hot(outputs['labels'], num_labels) if onehot \
-    else outputs['labels']
-    
+    if output_type == 'label_bbox':
+        labels = tf.one_hot(outputs['labels'], num_labels) if onehot \
+        else outputs['labels']
+    elif output_type == 'label':
+        labels = tf.one_hot(outputs, num_labels) if onehot else outputs
     def aug_mapper(img, bbox):
         bb_prior = BoundingBoxesOnImage([
             BoundingBox(x1=bbox[0], y1=bbox[1], x2=bbox[2], y2=bbox[3]),
@@ -268,9 +268,12 @@ def augment_img(img, outputs, augmenter, output_type, onehot, num_labels):
     
     if output_type == 'label':
         img = tf.numpy_function(augmenter.augment_image, [img], tf.uint8)
-        new_outputs = { 'labels': labels, 
-                       'bbox': outputs['bbox'] }
-    else:
+        new_outputs = labels
+    elif output_type == "bbox":
+        img, bb_aug = tf.numpy_function(aug_mapper, [img, outputs['bbox']], 
+                                        (tf.uint8, tf.float16))
+        new_outputs = bb_aug
+    elif output_type == "label_bbox":
         img, bb_aug = tf.numpy_function(aug_mapper, [img, outputs['bbox']], 
                                         (tf.uint8, tf.float16))
         new_outputs = { 'labels': labels, 

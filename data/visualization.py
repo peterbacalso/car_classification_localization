@@ -75,9 +75,12 @@ if __name__=="__main__":
 # =============================================================================
     
     gen = data.get_pipeline(type='train',
-                            #output='bbox',
+                            #output='label',
+                            onehot=True,
+                            model_type="resnet",
                             apply_tl_preprocess=True,
-                            apply_aug=True,
+                            apply_aug=False,
+                            scale=False,
                             channels=3,
                             seed=1)
     

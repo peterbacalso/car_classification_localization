@@ -3,7 +3,9 @@ from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.optimizers import SGD, Adam
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Dense, Dropout, GlobalAvgPool2D
+from tensorflow.keras.layers import (
+        Dense, Dropout, GlobalAvgPool2D, BatchNormalization, Activation
+        )
 import sys, os; 
 sys.path.insert(0, os.path.abspath('..'));
 
@@ -16,9 +18,16 @@ def TL(n_classes, num_frozen_layers, optimizer_type="sgd",
     elif model_type == "mobilenet":
         base = MobileNetV2(weights="imagenet", include_top=False)
     
-    avg = GlobalAvgPool2D()(base.output)
+    x = GlobalAvgPool2D()(base.output)
     
-    drop = Dropout(dropout_chance)(avg)
+# =============================================================================
+#     drop = Dropout(dropout_chance)(x)
+#     dense = Dense(units=512, kernel_regularizer=l2(reg))(drop)
+#     norm = BatchNormalization()(dense)
+#     x = Activation(activation="relu")(norm)
+# =============================================================================
+    
+    drop = Dropout(dropout_chance)(x)
     class_output = Dense(n_classes, 
                          kernel_regularizer=l2(reg),
                          activation="softmax",

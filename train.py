@@ -14,6 +14,7 @@ from data.data_loader import DataLoader
 from models.custom_cnn import CNN
 from models.three_cnn_layer import CNN_3
 from models.transfer_learning import TL
+from callbacks.stochastic_weighted_avg import SWA
 
 clear_session() # Clear models from previous sessions
 
@@ -26,6 +27,7 @@ def load_data(output="label_bbox", batch_size=32, channels=1,
                   './data/devkit', 
                   batch_size=batch_size)
     n_classes = len(data.df_train['label'].unique())
+    labels = data.labels
     print(f'{n_classes} CLASSES, Random Chance: {1/n_classes}')
     
     train_gen = data.get_pipeline(type='train',
@@ -45,11 +47,14 @@ def load_data(output="label_bbox", batch_size=32, channels=1,
                                   model_type=model_type,
                                   seed=seed)
     validation_steps = np.ceil(len(data.df_valid)/data.batch_size)
-
-    return n_classes, train_gen, steps_per_epoch, valid_gen, validation_steps
+    
+    return ( labels, n_classes, train_gen, 
+            steps_per_epoch, valid_gen, validation_steps)
         
 
-def get_callbacks(early_stopping_patience, 
+def get_callbacks(wandb_labels,
+                  wandb_gen,
+                  early_stopping_patience, 
                   reduce_lr_on_plateau_factor,
                   reduce_lr_on_plateau_patience,
                   reduce_lr_on_plateau_min_lr):   
@@ -60,7 +65,14 @@ def get_callbacks(early_stopping_patience,
 #     run_logdir = os.path.join(root_logdir, run_id)
 #     tensorboard = TensorBoard(run_logdir)
 # =============================================================================
-    wandb_cb = WandbCallback()
+    wandb_cb = WandbCallback(
+            data_type="image",
+            output_type="label",
+            labels=wandb_labels,
+            generator=wandb_gen
+            )
+    
+    swa = SWA('./logs/keras_swa.model', 3)
     
     # Early Stopping
     early_stopping = EarlyStopping(patience=early_stopping_patience, 
@@ -79,7 +91,8 @@ def get_callbacks(early_stopping_patience,
                                   min_lr=reduce_lr_on_plateau_min_lr, 
                                   verbose=1)
     
-    return [wandb_cb, early_stopping, checkpoint, reduce_lr]
+    return [wandb_cb, swa, early_stopping, checkpoint, reduce_lr]
+    #return [wandb_cb, early_stopping, checkpoint, reduce_lr]
         
     
 
@@ -89,38 +102,40 @@ if __name__=="__main__":
     
     
     wandb.init(config={
-            "epochs": 50,
+            "epochs": 150,
             "optimizer": "adam",
             "learning_rate": 1e-3,
             "dropout_chance": 0.7,
-            "reduce_lr_on_plateau_min_lr": 1e-4,
+            "reduce_lr_on_plateau_min_lr": 1e-6,
             "reduce_lr_on_plateau_factor": .33333,
             "reduce_lr_on_plateau_patience": 5,
             "l2_reg": 3e-3,
-            "num_frozen_layers": 123, # 103, 116, 123, 143
+            "num_frozen_layers": 133, # 103, 116, 123, 143 | 126, 135, 145
             "batch_size": 32,
             "channels": 3,
             "random_seed": 23,
             "early_stopping_patience": 10,
             "transfer_learning": True,
-            "transfer_learning_model": "resnet"
+            "transfer_learning_model": "resnet" #resnet | mobilenet
             })
     config = wandb.config
     
-    callbacks = get_callbacks(
-            early_stopping_patience=config.early_stopping_patience,
-            reduce_lr_on_plateau_factor=config.reduce_lr_on_plateau_factor,
-            reduce_lr_on_plateau_patience=config.reduce_lr_on_plateau_patience,
-            reduce_lr_on_plateau_min_lr=config.reduce_lr_on_plateau_min_lr
-            )
-    
-    n_classes, train_gen, steps_per_epoch, \
+    labels, n_classes, train_gen, steps_per_epoch, \
     valid_gen, validation_steps = \
     load_data(batch_size=config.batch_size, 
               channels=config.channels,
               apply_tl_preprocess=config.transfer_learning,
               model_type=config.transfer_learning_model,
               seed=config.random_seed)
+    
+    callbacks = get_callbacks(
+        wandb_labels=labels.labels,
+        wandb_gen=valid_gen,
+        early_stopping_patience=config.early_stopping_patience,
+        reduce_lr_on_plateau_factor=config.reduce_lr_on_plateau_factor,
+        reduce_lr_on_plateau_patience=config.reduce_lr_on_plateau_patience,
+        reduce_lr_on_plateau_min_lr=config.reduce_lr_on_plateau_min_lr
+        )
     
     config.num_classes = n_classes
     
@@ -139,6 +154,7 @@ if __name__=="__main__":
                reg=config.l2_reg,
                num_frozen_layers=config.num_frozen_layers,
                dropout_chance=config.dropout_chance,
+               model_type=config.transfer_learning_model,
                channels=config.channels)
 
     history_clf = model.fit(
@@ -155,9 +171,6 @@ if __name__=="__main__":
     print('Best validation labels loss:', validation_labels_loss)
     labels_loss = np.amin(history_clf.history['labels_loss']) 
     print('Best labels loss:', labels_loss)
-    
-    #wandb.save('./checkpoints/*')
-    wandb.save("../checkpoints/*")
 
     del model
     clear_session()
