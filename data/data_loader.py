@@ -12,6 +12,7 @@ from tensorflow.keras.applications.resnet50 \
 import preprocess_input as preproc_rn
 from tensorflow.keras.applications.mobilenet_v2 \
 import preprocess_input as preproc_mn
+from efficientnet.tfkeras import preprocess_input as preproc_efn
 from sklearn.model_selection import train_test_split
 from imgaug import augmenters as iaa
 from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
@@ -30,7 +31,7 @@ class DataLoader():
         
         meta = loadmat(devkit_path/'cars_meta.mat')
         train_annos = loadmat(devkit_path/'cars_train_annos.mat')
-        test_annos = loadmat(devkit_path/'cars_test_annos.mat')
+        test_annos = loadmat(devkit_path/'cars_test_annos_withlabels.mat')
         
         labels = [c for c in meta['class_names'][0]]
         labels = pd.DataFrame(labels, columns=['labels'])
@@ -38,10 +39,10 @@ class DataLoader():
         frame = [[i.flat[0] for i in line] 
                 for line in train_annos['annotations'][0]]
         
-        columns_train = ['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2', 
-                         'label', 'fname']
+        columns = ['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2', 
+                   'label', 'fname']
         
-        df = pd.DataFrame(frame, columns=columns_train)
+        df = pd.DataFrame(frame, columns=columns)
         df['label'] = df['label']-1 # indexing starts on zero.
         df['fname'] = [f'{train_path}/{f}' 
                 for f in df['fname']] #  Appending Path
@@ -55,10 +56,15 @@ class DataLoader():
         
         test_frame = [[i.flat[0] for i in line] 
                 for line in test_annos['annotations'][0]]
-        columns_test = ['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2', 'fname']
-        df_test = pd.DataFrame(test_frame, columns=columns_test)
+        
+        df_test = pd.DataFrame(test_frame, columns=columns)
+        df_test['label'] = df_test['label']-1
         df_test['fname'] = [f'{test_path}/{f}' 
                for f in df_test['fname']] #  Appending Path
+        
+        df_test = df_test.sort_index()
+        
+        sometimes = lambda aug: iaa.Sometimes(0.5, aug)
         
         resizer = iaa.Sequential([
             iaa.Resize({"height": IMG_SIZE, "width": IMG_SIZE}),
@@ -67,23 +73,6 @@ class DataLoader():
             iaa.Resize({"height": IMG_SIZE, "width": IMG_SIZE}),
             iaa.Fliplr(0.5), # horizontal flips
             iaa.Crop(percent=(0, 0.1)), # random crops
-            # Small gaussian blur with random sigma between 0 and 0.5.
-            # But we only blur about 50% of all images.
-            iaa.Sometimes(0.5,
-                iaa.GaussianBlur(sigma=(0, 0.5))
-            ),
-            # Strengthen or weaken the contrast in each image.
-            iaa.LinearContrast((0.4, 1.6)),
-            # Add gaussian noise.
-            # For 50% of all images, we sample the noise once per pixel.
-            # For the other 50% of all images, we sample the noise per pixel AND
-            # channel. This can change the color (not only brightness) of the
-            # pixels.
-            iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05*255), per_channel=0.5),
-            # Make some images brighter and some darker.
-            # In 20% of all cases, we sample the multiplier once per channel,
-            # which can end up changing the color of the images.
-            iaa.Multiply((0.8, 1.2), per_channel=0.2),
             # Apply affine transformations to each image.
             # Scale/zoom them, translate/move them, rotate them and shear them.
             iaa.Affine(
@@ -91,6 +80,105 @@ class DataLoader():
                 translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)},
                 rotate=(-15, 15),
                 shear=(-4, 4)
+            ),
+            # Execute 0 to 5 of the following (less important) augmenters per
+            # image. Don't execute all of them, as that would often be way too
+            # strong.
+            iaa.SomeOf((0, 5),
+                [
+                    # Convert some images into their superpixel representation,
+                    # sample between 20 and 200 superpixels per image, but do
+                    # not replace all superpixels with their average, only
+                    # some of them (p_replace).
+                    sometimes(
+                        iaa.Superpixels(
+                            p_replace=(0, 1.0),
+                            n_segments=(20, 200)
+                        )
+                    ),
+    
+                    # Blur each image with varying strength using
+                    # gaussian blur (sigma between 0 and 3.0),
+                    # average/uniform blur (kernel size between 2x2 and 7x7)
+                    # median blur (kernel size between 3x3 and 11x11).
+                    iaa.OneOf([
+                        iaa.GaussianBlur((0, 3.0)),
+                        iaa.AverageBlur(k=(2, 7)),
+                        iaa.MedianBlur(k=(3, 11)),
+                    ]),
+                    iaa.Alpha(
+                        factor=(0.2, 0.8),
+                        first=iaa.Sharpen(1.0, lightness=2),
+                        second=iaa.CoarseDropout(p=0.1, size_px=8),
+                        per_channel=.5
+                    ),
+                    # Sharpen each image, overlay the result with the original
+                    # image using an alpha between 0 (no sharpening) and 1
+                    # (full sharpening effect).
+                    iaa.Sharpen(alpha=(0, 1.0), lightness=(0.75, 1.5)),
+    
+                    # Same as sharpen, but for an embossing effect.
+                    iaa.Emboss(alpha=(0, 1.0), strength=(0, 2.0)),
+    
+                    # Search in some images either for all edges or for
+                    # directed edges. These edges are then marked in a black
+                    # and white image and overlayed with the original image
+                    # using an alpha of 0 to 0.7.
+                    sometimes(iaa.OneOf([
+                        iaa.EdgeDetect(alpha=(0, 0.5)),
+                        iaa.DirectedEdgeDetect(
+                            alpha=(0, 0.5), direction=(0.0, 1.0)
+                        ),
+                    ])),
+    
+                    # Add gaussian noise to some images.
+                    # In 50% of these cases, the noise is randomly sampled per
+                    # channel and pixel.
+                    # In the other 50% of all cases it is sampled once per
+                    # pixel (i.e. brightness change).
+                    iaa.AdditiveGaussianNoise(
+                        loc=0, scale=(0.0, 0.05*255), per_channel=0.5
+                    ),
+    
+                    # Either drop randomly 1 to 10% of all pixels (i.e. set
+                    # them to black) or drop them on an image with 2-5% percent
+                    # of the original size, leading to large dropped
+                    # rectangles.
+                    iaa.OneOf([
+                        iaa.Dropout((0.01, 0.1), per_channel=0.5),
+                        iaa.CoarseDropout(
+                            (0.03, 0.15), size_percent=(0.02, 0.05),
+                            per_channel=0.2
+                        ),
+                    ]),
+    
+                    # Invert each image's channel with 5% probability.
+                    # This sets each pixel value v to 255-v.
+                    iaa.Invert(0.05, per_channel=True), # invert color channels
+    
+                    # Add a value of -10 to 10 to each pixel.
+                    iaa.Add((-10, 10), per_channel=0.5),
+    
+                    # Change brightness of images (50-150% of original value).
+                    iaa.Multiply((0.5, 1.5), per_channel=0.5),
+    
+                    # Convert each image to grayscale and then overlay the
+                    # result with the original with random alpha. I.e. remove
+                    # colors with varying strengths.
+                    iaa.Grayscale(alpha=(0.0, 1.0)),
+    
+                    # In some images move pixels locally around (with random
+                    # strengths).
+                    sometimes(
+                        iaa.ElasticTransformation(alpha=(0.5, 3.5), sigma=0.25)
+                    ),
+                    # Strengthen or weaken the contrast in each image.
+                    iaa.LinearContrast((0.4, 1.6), per_channel=True),
+                    # In some images distort local areas with varying strength.
+                    sometimes(iaa.PiecewiseAffine(scale=(0.01, 0.05)))
+                ],
+                # do all of the above augmentations in random order
+                random_order=True
             )
         ], random_order=True)
 
@@ -128,59 +216,61 @@ class DataLoader():
         elif type == 'test':
             df = self.df_test
             
-        if type == 'test':
-            paths = df['fname']
-            paths_targets = tf.data.Dataset.from_tensor_slices(paths)
-            paths_targets = paths_targets.shuffle(BUFFER_SIZE)
-            img_targets = paths_targets.map(
-                    partial(load_and_resize_image_test, channels=channels),
-                    num_parallel_calls=AUTOTUNE)
-            img_targets = img_targets.map(standard_scaler_test).repeat()
-            ds = img_targets.batch(self.batch_size).prefetch(
-                    buffer_size=AUTOTUNE)
-            return ds
-        else:
-            distinct_labels = df['label'].unique()
-            #num_labels = len(distinct_labels) # risk of val and train not matching
-            num_labels = len(self.labels)
-            for car_type in distinct_labels:
-                cars = df[df['label']==car_type]
-                
-                paths = cars['fname']
-                labels = cars['label']
-                bbox = cars[['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2']]
-                
-                paths_targets = make_ds(paths.values, 
-                                        labels.values, 
-                                        bbox.values,
-                                        output=output,
-                                        seed=seed)
-                
-                imgs_targets = paths_targets.map(
-                    partial(load_image, channels=channels),
-                    num_parallel_calls=AUTOTUNE)
-                              
-                if apply_aug:
-                    imgs_targets = imgs_targets.map(
-                            partial(augment_img, 
-                                    augmenter=self.augmenter,
-                                    output_type=output,
-                                    onehot=onehot,
-                                    num_labels=num_labels),
-                            num_parallel_calls=AUTOTUNE)
-                else:
-                    imgs_targets = imgs_targets.map(
-                            partial(augment_img, 
-                                    augmenter=self.resizer,
-                                    output_type=output,
-                                    onehot=onehot,
-                                    num_labels=num_labels),
-                            num_parallel_calls=AUTOTUNE)
-                            
-                if not apply_tl_preprocess and scale:
-                    imgs_targets = imgs_targets.map(standard_scaler, 
-                                                    num_parallel_calls=AUTOTUNE)
-                datasets.append(imgs_targets)
+# =============================================================================
+#         if type == 'test':
+#             paths = df['fname']
+#             paths_targets = tf.data.Dataset.from_tensor_slices(paths)
+#             paths_targets = paths_targets.shuffle(BUFFER_SIZE)
+#             img_targets = paths_targets.map(
+#                     partial(load_and_resize_image_test, channels=channels),
+#                     num_parallel_calls=AUTOTUNE)
+#             img_targets = img_targets.map(standard_scaler_test).repeat()
+#             ds = img_targets.batch(self.batch_size).prefetch(
+#                     buffer_size=AUTOTUNE)
+#             return ds
+#         else:
+# =============================================================================
+        distinct_labels = df['label'].unique()
+        #num_labels = len(distinct_labels) # risk of val and train not matching
+        num_labels = len(self.labels)
+        for car_type in distinct_labels:
+            cars = df[df['label']==car_type]
+            
+            paths = cars['fname']
+            labels = cars['label']
+            bbox = cars[['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2']]
+            
+            paths_targets = make_ds(paths.values, 
+                                    labels.values, 
+                                    bbox.values,
+                                    output=output,
+                                    seed=seed)
+            
+            imgs_targets = paths_targets.map(
+                partial(load_image, channels=channels),
+                num_parallel_calls=AUTOTUNE)
+                          
+            if apply_aug:
+                imgs_targets = imgs_targets.map(
+                        partial(augment_img, 
+                                augmenter=self.augmenter,
+                                output_type=output,
+                                onehot=onehot,
+                                num_labels=num_labels),
+                        num_parallel_calls=AUTOTUNE)
+            else:
+                imgs_targets = imgs_targets.map(
+                        partial(augment_img, 
+                                augmenter=self.resizer,
+                                output_type=output,
+                                onehot=onehot,
+                                num_labels=num_labels),
+                        num_parallel_calls=AUTOTUNE)
+                        
+            if not apply_tl_preprocess and scale:
+                imgs_targets = imgs_targets.map(standard_scaler, 
+                                                num_parallel_calls=AUTOTUNE)
+            datasets.append(imgs_targets)
             
         num_labels = len(df['label'].unique())
         sampling_weights = np.ones(num_labels)*(1./num_labels)
@@ -214,6 +304,8 @@ def preprocess(img, outputs, model_type):
         img = tf.numpy_function(preproc_rn, [img], tf.float32)
     elif model_type == "mobilenet":
         img = tf.numpy_function(preproc_mn, [img], tf.float32)
+    elif model_type == "efn_b3":
+        img = tf.numpy_function(preproc_efn, [img], tf.float32)
     #img = preprocess_input(img)
     return img, outputs   
     
@@ -280,21 +372,4 @@ def augment_img(img, outputs, augmenter, output_type, onehot, num_labels):
                        'bbox': bb_aug }
         
     return img, new_outputs
-
-
-# =============================================================================
-# HELPERS FOR TEST
-# =============================================================================
-
-def standard_scaler_test(img):
-    img = img/255
-    return img
-
-def load_and_resize_image_test(path, channels=1):
-    img = tf.io.read_file(path)
-    img = tf.image.decode_jpeg(img, channels=channels)
-    img = tf.image.resize(img, [IMG_SIZE, IMG_SIZE])
-    return img
-
-
 

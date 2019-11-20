@@ -1,0 +1,197 @@
+labels,Recall,Precision
+AM General Hummer SUV 2000,1.0,0.9444
+Acura RL Sedan 2012,0.881,0.8605
+Acura TL Sedan 2012,1.0,0.74
+Acura TL Type-S 2008,0.975,0.9286
+Acura TSX Sedan 2012,0.8654,0.9783
+Acura Integra Type R 2001,1.0,0.8936
+Acura ZDX Hatchback 2012,0.85,0.9189
+Aston Martin V8 Vantage Convertible 2012,0.8413,0.8154
+Aston Martin V8 Vantage Coupe 2012,0.7297,0.7941
+Aston Martin Virage Convertible 2012,0.7333,0.9429
+Aston Martin Virage Coupe 2012,0.8491,0.8654
+Audi RS 4 Convertible 2008,0.8824,0.9677
+Audi A5 Coupe 2012,0.881,0.6271
+Audi TTS Coupe 2012,0.5319,0.7812
+Audi R8 Coupe 2012,0.9118,0.9688
+Audi V8 Sedan 1994,0.8333,0.7
+Audi 100 Sedan 1994,0.6444,0.7632
+Audi 100 Wagon 1994,0.7778,0.7955
+Audi TT Hatchback 2011,0.7872,0.5522
+Audi S6 Sedan 2011,0.9286,0.8667
+Audi S5 Convertible 2012,0.8182,0.8438
+Audi S5 Coupe 2012,0.6182,0.6667
+Audi S4 Sedan 2012,0.72,0.973
+Audi S4 Sedan 2007,0.9143,0.7805
+Audi TT RS Coupe 2012,0.6744,0.7632
+BMW ActiveHybrid 5 Sedan 2012,0.9474,0.8
+BMW 1 Series Convertible 2012,0.9608,0.98
+BMW 1 Series Coupe 2012,1.0,1.0
+BMW 3 Series Sedan 2012,0.8043,0.8222
+BMW 3 Series Wagon 2012,0.9,0.8654
+BMW 6 Series Convertible 2007,0.7647,0.7647
+BMW X5 SUV 2007,0.9535,0.8913
+BMW X6 SUV 2012,0.9231,0.973
+BMW M3 Coupe 2012,1.0,0.9636
+BMW M5 Sedan 2010,0.9231,1.0
+BMW M6 Convertible 2010,0.898,0.8462
+BMW X3 SUV 2012,0.973,0.973
+BMW Z4 Convertible 2012,1.0,1.0
+Bentley Continental Supersports Conv. Convertible 2012,0.8919,0.8919
+Bentley Arnage Sedan 2009,0.9767,0.9545
+Bentley Mulsanne Sedan 2011,0.9286,0.8966
+Bentley Continental GT Coupe 2012,0.6,0.8889
+Bentley Continental GT Coupe 2007,0.875,0.6034
+Bentley Continental Flying Spur Sedan 2007,0.8367,0.9535
+Bugatti Veyron 16.4 Convertible 2009,0.7619,0.8421
+Bugatti Veyron 16.4 Coupe 2009,0.85,0.8095
+Buick Regal GS 2012,1.0,1.0
+Buick Rainier SUV 2007,0.9189,0.9189
+Buick Verano Sedan 2012,0.9375,1.0
+Buick Enclave SUV 2012,0.9706,0.9429
+Cadillac CTS-V Sedan 2012,1.0,1.0
+Cadillac SRX SUV 2012,0.9773,0.9348
+Cadillac Escalade EXT Crew Cab 2007,0.9487,0.881
+Chevrolet Silverado 1500 Hybrid Crew Cab 2012,0.8966,0.8667
+Chevrolet Corvette Convertible 2012,0.8444,0.8636
+Chevrolet Corvette ZR1 2012,0.8696,0.8163
+Chevrolet Corvette Ron Fellows Edition Z06 2007,0.9143,0.8889
+Chevrolet Traverse SUV 2012,0.7879,0.963
+Chevrolet Camaro Convertible 2012,0.7941,0.9643
+Chevrolet HHR SS 2010,1.0,1.0
+Chevrolet Impala Sedan 2007,0.9773,0.8431
+Chevrolet Tahoe Hybrid SUV 2012,0.6842,0.8966
+Chevrolet Sonic Sedan 2012,0.95,0.9744
+Chevrolet Express Cargo Van 2007,0.4792,0.5
+Chevrolet Avalanche Crew Cab 2012,0.8571,0.7273
+Chevrolet Cobalt SS 2010,0.92,1.0
+Chevrolet Malibu Hybrid Sedan 2010,0.9756,0.9302
+Chevrolet TrailBlazer SS 2009,0.9318,0.9535
+Chevrolet Silverado 2500HD Regular Cab 2012,0.6757,0.7353
+Chevrolet Silverado 1500 Classic Extended Cab 2007,0.9545,0.84
+Chevrolet Express Van 2007,0.5208,0.4545
+Chevrolet Monte Carlo Coupe 2007,0.9302,0.9302
+Chevrolet Malibu Sedan 2007,0.881,0.925
+Chevrolet Silverado 1500 Extended Cab 2012,0.9091,0.7547
+Chevrolet Silverado 1500 Regular Cab 2012,0.6452,0.6452
+Chrysler Aspen SUV 2009,0.9487,0.881
+Chrysler Sebring Convertible 2010,0.9667,0.9667
+Chrysler Town and Country Minivan 2012,0.9149,0.9556
+Chrysler 300 SRT-8 2010,0.8958,0.9773
+Chrysler Crossfire Convertible 2008,0.9787,0.92
+Chrysler PT Cruiser Convertible 2008,1.0,1.0
+Daewoo Nubira Wagon 2002,0.9333,0.8571
+Dodge Caliber Wagon 2012,0.6562,0.913
+Dodge Caliber Wagon 2007,0.9643,0.8182
+Dodge Caravan Minivan 1997,0.9429,0.9706
+Dodge Ram Pickup 3500 Crew Cab 2010,0.92,0.9787
+Dodge Ram Pickup 3500 Quad Cab 2009,0.85,0.8718
+Dodge Sprinter Cargo Van 2009,0.881,0.881
+Dodge Journey SUV 2012,0.878,1.0
+Dodge Dakota Crew Cab 2010,0.8409,1.0
+Dodge Dakota Club Cab 2007,0.8947,0.7727
+Dodge Magnum Wagon 2008,0.98,0.98
+Dodge Challenger SRT8 2011,1.0,0.9545
+Dodge Durango SUV 2012,0.9474,0.9474
+Dodge Durango SUV 2007,0.8958,0.9348
+Dodge Charger Sedan 2012,0.931,0.7714
+Dodge Charger SRT-8 2009,0.902,0.9583
+Eagle Talon Hatchback 1998,0.9333,0.9545
+FIAT 500 Abarth 2012,1.0,1.0
+FIAT 500 Convertible 2012,0.9024,0.9487
+Ferrari FF Coupe 2012,0.8,0.9333
+Ferrari California Convertible 2012,0.9388,0.9388
+Ferrari 458 Italia Convertible 2012,0.7805,0.8421
+Ferrari 458 Italia Coupe 2012,0.9,0.7759
+Fisker Karma Sedan 2012,1.0,0.9583
+Ford F-450 Super Duty Crew Cab 2012,0.9474,0.973
+Ford Mustang Convertible 2007,0.925,0.9737
+Ford Freestar Minivan 2007,1.0,0.8864
+Ford Expedition EL SUV 2009,0.9556,0.9149
+Ford Edge SUV 2012,0.9524,0.9756
+Ford Ranger SuperCab 2011,0.9828,0.95
+Ford GT Coupe 2006,0.9149,0.86
+Ford F-150 Regular Cab 2012,0.9608,1.0
+Ford F-150 Regular Cab 2007,0.9231,0.973
+Ford Focus Sedan 2007,0.9783,0.9184
+Ford E-Series Wagon Van 2012,0.9722,0.9459
+Ford Fiesta Sedan 2012,0.8723,0.9318
+GMC Terrain SUV 2012,0.9778,0.9362
+GMC Savana Van 2012,0.7632,0.8788
+GMC Yukon Hybrid SUV 2012,0.875,0.8974
+GMC Acadia SUV 2012,1.0,0.96
+GMC Canyon Extended Cab 2012,0.7879,0.963
+Geo Metro Convertible 1993,0.8537,1.0
+HUMMER H3T Crew Cab 2010,0.9667,0.8056
+HUMMER H2 SUT Crew Cab 2009,0.814,1.0
+Honda Odyssey Minivan 2012,0.9333,0.8936
+Honda Odyssey Minivan 2007,0.9024,1.0
+Honda Accord Coupe 2012,0.9107,1.0
+Honda Accord Sedan 2012,0.9565,0.88
+Hyundai Veloster Hatchback 2012,0.9667,0.9355
+Hyundai Santa Fe SUV 2012,0.8222,0.9737
+Hyundai Tucson SUV 2012,0.9688,0.9688
+Hyundai Veracruz SUV 2012,0.9412,0.6667
+Hyundai Sonata Hybrid Sedan 2012,0.9697,0.9697
+Hyundai Elantra Sedan 2007,0.9444,0.9444
+Hyundai Accent Sedan 2012,0.9722,0.875
+Hyundai Genesis Sedan 2012,0.9574,0.9
+Hyundai Sonata Sedan 2012,0.8824,0.9677
+Hyundai Elantra Touring Hatchback 2012,0.9512,1.0
+Hyundai Azera Sedan 2012,0.8936,0.9545
+Infiniti G Coupe IPL 2012,0.9615,0.9259
+Infiniti QX56 SUV 2011,0.9574,1.0
+Isuzu Ascender SUV 2008,0.9524,0.8696
+Jaguar XK XKR 2012,0.9375,0.8571
+Jeep Patriot SUV 2012,0.9375,0.9375
+Jeep Wrangler SUV 2012,1.0,1.0
+Jeep Liberty SUV 2012,0.925,0.9487
+Jeep Grand Cherokee SUV 2012,0.925,0.7551
+Jeep Compass SUV 2012,0.8667,0.9512
+Lamborghini Reventon Coupe 2008,0.9811,1.0
+Lamborghini Aventador Coupe 2012,0.925,0.9737
+Lamborghini Gallardo LP 570-4 Superleggera 2012,0.8919,0.9706
+Lamborghini Diablo Coupe 2001,0.9057,1.0
+Land Rover Range Rover SUV 2012,0.9556,0.9348
+Land Rover LR2 SUV 2012,0.9167,0.9778
+Lincoln Town Car Sedan 2011,0.9773,1.0
+MINI Cooper Roadster Convertible 2012,0.9767,0.9767
+Maybach Landaulet Convertible 2012,0.9714,0.8718
+Mazda Tribute SUV 2011,0.9412,0.9412
+McLaren MP4-12C Coupe 2012,0.9535,0.8367
+Mercedes-Benz 300-Class Convertible 1993,1.0,0.8864
+Mercedes-Benz C-Class Sedan 2012,0.9388,0.9583
+Mercedes-Benz SL-Class Coupe 2009,0.9394,0.9688
+Mercedes-Benz E-Class Sedan 2012,0.9024,0.9737
+Mercedes-Benz S-Class Sedan 2012,0.9608,0.9608
+Mercedes-Benz Sprinter Van 2012,0.881,0.8605
+Mitsubishi Lancer Sedan 2012,0.9091,1.0
+Nissan Leaf Hatchback 2012,0.9756,0.9756
+Nissan NV Passenger Van 2012,0.9487,0.9024
+Nissan Juke Hatchback 2012,0.9535,0.9535
+Nissan 240SX Coupe 1998,0.9744,0.8837
+Plymouth Neon Coupe 1999,0.9722,0.9459
+Porsche Panamera Sedan 2012,0.9643,0.9
+Ram C/V Cargo Van Minivan 2012,0.8,0.8571
+Rolls-Royce Phantom Drophead Coupe Convertible 2012,0.9286,0.9512
+Rolls-Royce Ghost Sedan 2012,0.8667,0.8966
+Rolls-Royce Phantom Sedan 2012,0.8824,0.9375
+Scion xD Hatchback 2012,0.9762,1.0
+Spyker C8 Convertible 2009,0.8,0.8889
+Spyker C8 Coupe 2009,0.8491,0.8333
+Suzuki Aerio Sedan 2007,0.8529,1.0
+Suzuki Kizashi Sedan 2012,0.9091,0.9804
+Suzuki SX4 Hatchback 2012,0.95,0.8636
+Suzuki SX4 Sedan 2012,0.8333,0.7143
+Tesla Model S Sedan 2012,0.9643,0.9643
+Toyota Sequoia SUV 2012,0.8718,0.8947
+Toyota Camry Sedan 2012,1.0,0.8333
+Toyota Corolla Sedan 2012,0.9231,1.0
+Toyota 4Runner SUV 2012,0.9706,0.9706
+Volkswagen Golf Hatchback 2012,0.9512,1.0
+Volkswagen Golf Hatchback 1991,0.9444,0.9714
+Volkswagen Beetle Hatchback 2012,0.9459,1.0
+Volvo C30 Hatchback 2012,0.9688,1.0
+Volvo 240 Sedan 1993,0.9636,1.0
+Volvo XC90 SUV 2007,0.9318,0.9762
+smart fortwo Convertible 2012,0.9444,1.0

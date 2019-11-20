@@ -1,5 +1,6 @@
 from tensorflow.keras.applications.resnet50 import ResNet50
 from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2
+import efficientnet.tfkeras as efn 
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.optimizers import SGD, Adam
 from tensorflow.keras.models import Model
@@ -8,16 +9,22 @@ from tensorflow.keras.layers import (
         )
 import sys, os; 
 sys.path.insert(0, os.path.abspath('..'));
+from loss_functions.focal_loss import focal_loss
 
 def TL(n_classes, num_frozen_layers, optimizer_type="sgd", 
-        lr=.001, reg=1e-6, dropout_chance=0.2,
+        lr=.001, reg=1e-6, dropout_chance=0.2, use_focal_loss=False,
         channels=1, output="label_bbox", model_type="resnet"):
     
     if model_type == "resnet":
-        base = ResNet50(weights="imagenet", include_top=False)
+        base = ResNet50(weights="imagenet", include_top=False,
+                        input_shape=(224,224,channels))
     elif model_type == "mobilenet":
-        base = MobileNetV2(weights="imagenet", include_top=False)
-    
+        base = MobileNetV2(weights="imagenet", include_top=False,
+                           input_shape=(224,224,channels))
+    elif model_type == "efn_b3":
+        base = efn.EfficientNetB3(weights="imagenet", include_top=False,
+                                  input_shape=(224,224,channels))
+        
     x = GlobalAvgPool2D()(base.output)
     
 # =============================================================================
@@ -55,13 +62,17 @@ def TL(n_classes, num_frozen_layers, optimizer_type="sgd",
                       metrics=["accuracy"])
         
     elif output=="label":
+        loss = focal_loss(alpha=1) if use_focal_loss \
+        else "categorical_crossentropy"
         model = Model(inputs=base.input, outputs=class_output)
-        model.compile(loss="categorical_crossentropy",
+        model.compile(loss=loss,
                       optimizer=optimizer,
                       metrics=["accuracy"])
     else:
+        loss = focal_loss(alpha=1) if use_focal_loss \
+        else "categorical_crossentropy"
         model = Model(inputs=base.input, outputs=[class_output,bbox_output])
-        model.compile(loss=["categorical_crossentropy", "msle"],
+        model.compile(loss=[loss, "msle"],
                       loss_weights=[.8,.2],
                       optimizer=optimizer,
                       metrics=["accuracy"])

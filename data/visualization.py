@@ -57,7 +57,7 @@ def display_images(df_train, df_test, n):
     plt.show()
     
 if __name__=="__main__":
-    data = DataLoader(batch_size=1)
+    data = DataLoader(batch_size=32)
 
     df_train = data.df_train.merge(data.labels, 
                                    left_on='label', 
@@ -84,46 +84,56 @@ if __name__=="__main__":
                             channels=3,
                             seed=1)
     
-    for inputs, outputs in gen.take(1):
-        print('inputs', inputs)
-        print('outputs', outputs)
+# =============================================================================
+#     gen = data.get_pipeline(type='test',
+#                             output="label",
+#                             channels=3,
+#                             apply_tl_preprocess=True,
+#                             model_type="resnet",
+#                             seed=1)
+#     steps = np.ceil(len(data.df_test)/data.batch_size)
+# =============================================================================
     
 # =============================================================================
-#     # Comment out the standard scaler in data loader to use visualization code below
-#     channels=3
-#     
-#     train_gen = data.get_pipeline(type='train',
-#                                   apply_aug=True,
-#                                   channels=channels)
-#     for inputs, outputs in train_gen.take(1):
-#         for i in range(inputs.numpy().shape[0]):
-#             
-#             index = np.argmax(outputs['labels'][i].numpy())
-#             title = data.labels.iloc[index]['labels']
-#             
-#             img = np.squeeze(inputs.numpy()[i], axis=2) if channels == 1 \
-#             else inputs.numpy()[i]
-#             
-#             image = Image.fromarray(img, mode='L') if channels == 1 \
-#             else Image.fromarray(img)
-#             plt.imshow(image)
-#             
-#             bbox_x1 = outputs['bbox'][i][0].numpy()
-#             bbox_y1 = outputs['bbox'][i][1].numpy()
-#             bbox_x2 = outputs['bbox'][i][2].numpy()
-#             bbox_y2 = outputs['bbox'][i][3].numpy()
-#             
-#             xy = bbox_x1, bbox_y1
-#             width = bbox_x2 - bbox_x1
-#             height = bbox_y2 - bbox_y1
-#             rect = Rectangle(xy, width, height, 
-#                              fill=False, color='r', linewidth=2)
-#             
-#             plt.axis('off')
-#             plt.title(title)
-#             plt.gca().add_patch(rect)
-#             
-#             plt.show()
+#     for inputs, outputs in gen.take(1):
+#         print('inputs', inputs)
+#         print('outputs', outputs)
 # =============================================================================
+    
+    # Comment out the standard scaler in data loader to use visualization code below
+    channels=3
+    
+    train_gen = data.get_pipeline(type='train',
+                                  apply_aug=True,
+                                  channels=channels)
+    for inputs, outputs in train_gen.take(1):
+        for i in range(inputs.numpy().shape[0]):
+            
+            index = np.argmax(outputs['labels'][i].numpy())
+            title = data.labels.iloc[index]['labels']
+            
+            img = np.squeeze(inputs.numpy()[i], axis=2) if channels == 1 \
+            else inputs.numpy()[i]
+            
+            image = Image.fromarray(img, mode='L') if channels == 1 \
+            else Image.fromarray(img)
+            plt.imshow(image)
+            
+            bbox_x1 = outputs['bbox'][i][0].numpy()
+            bbox_y1 = outputs['bbox'][i][1].numpy()
+            bbox_x2 = outputs['bbox'][i][2].numpy()
+            bbox_y2 = outputs['bbox'][i][3].numpy()
+            
+            xy = bbox_x1, bbox_y1
+            width = bbox_x2 - bbox_x1
+            height = bbox_y2 - bbox_y1
+            rect = Rectangle(xy, width, height, 
+                             fill=False, color='r', linewidth=2)
+            
+            plt.axis('off')
+            plt.title(title)
+            plt.gca().add_patch(rect)
+            
+            plt.show()
             
 
