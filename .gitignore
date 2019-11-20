@@ -6,6 +6,7 @@ checkpoints/*
 data/data_loader_v2.py
 wandb/*
 old_checkpoints/*
+opt_progress/*
 
 
 
