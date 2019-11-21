@@ -104,6 +104,7 @@ As shown on the image above, the blue line represents the transfer learning mode
 
 The best results so far was achieved by EfficientNet-B3 with the following [hyperparameters](https://app.wandb.ai/peterbacalso/car_classification/runs/0p6yeqbq/overview) and using Focal Loss.
 
+TODO: short Focal Loss explanation
 
 Training vs validation metrics were close during model training so underfitting or overfitting did not occur
 Validation Loss: 
@@ -124,6 +125,7 @@ Activation Heatmap
 ![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/mclaren_heatmap.png)
 
 TODO: 
+- Hyperas Training
 - Add Confusion matrix (its big how to insert here)
 - Try Gradient Ascent (deep dream?)
 - Calculate IOU for bbox
