@@ -1,6 +1,6 @@
 # Stanford Cars Dataset Image Classification and Localization
 
-TODO: Add image examples
+![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/sample_images.png)
 
 # Input Pipeline
 
@@ -9,7 +9,7 @@ When a transfer learning model is used for training, the corresponding `prerpoce
 
 There are only a few (~30-50) images per class so to combat overfitting, heavy augmentation was applied through the library [imgaug](https://imgaug.readthedocs.io/en/latest/). See [data_loader.py](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/data/data_loader.py) for implementation details.
 
-TODO: Add augmented image examples
+![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/sample_aug.png)
 
 The data has a class imbalance so one way to handle this is through oversampling which is creating copies of our minority classes to match the majority ones. Fortunately we do not have to do this explicitly since we can get it for free by modifying the way we output images from the tf.data generator. Oversampling is achieved by splitting the data by their class labels and sampling from them uniformly. This preserves the underlying distribution of the minority classes but evens out the dataset without needing to collect more data!
 
