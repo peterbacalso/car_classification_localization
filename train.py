@@ -20,7 +20,7 @@ clear_session() # Clear models from previous sessions
 
 
 def load_data(output="label_bbox", batch_size=32, channels=1, 
-              apply_tl_preprocess=False, model_type="resnet", seed=23):
+              tl_preprocess=False, model_type="resnet", seed=23):
     
     data = DataLoader('./data/cars_train', 
                   './data/cars_test', 
@@ -34,7 +34,7 @@ def load_data(output="label_bbox", batch_size=32, channels=1,
                                   output=output,
                                   apply_aug=True,
                                   channels=channels,
-                                  apply_tl_preprocess=apply_tl_preprocess,
+                                  tl_preprocess=tl_preprocess,
                                   model_type=model_type,
                                   seed=seed)
     steps_per_epoch = np.ceil(len(data.df_train)/data.batch_size)
@@ -43,7 +43,7 @@ def load_data(output="label_bbox", batch_size=32, channels=1,
                                   output=output,
                                   channels=channels,
                                   apply_aug=False,
-                                  apply_tl_preprocess=apply_tl_preprocess,
+                                  tl_preprocess=tl_preprocess,
                                   model_type=model_type,
                                   seed=seed)
     validation_steps = np.ceil(len(data.df_valid)/data.batch_size)
@@ -125,7 +125,7 @@ if __name__=="__main__":
     valid_gen, validation_steps = \
     load_data(batch_size=config.batch_size, 
               channels=config.channels,
-              apply_tl_preprocess=config.transfer_learning,
+              tl_preprocess=config.transfer_learning,
               model_type=config.transfer_learning_model,
               seed=config.random_seed)
     

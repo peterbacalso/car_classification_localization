@@ -100,6 +100,8 @@ Swapping the model to a pretrained one based on imagenet dramatically improved b
 
 As shown on the image above, the blue line represents the transfer learning model and at epoch 5 it has already reached 65% label accuracy.
 
+TODO: try siames networks
+
 ## Results
 
 The best results so far was achieved by EfficientNet-B3 with the following [hyperparameters](https://app.wandb.ai/peterbacalso/car_classification/runs/0p6yeqbq/overview) and using Focal Loss.
@@ -130,6 +132,8 @@ TODO:
 - Try Gradient Ascent (deep dream?)
 - Calculate IOU for bbox
 - Streamlit link??
+
+## Challenges
 
 ## Dataset Citation
 
