@@ -196,7 +196,7 @@ class DataLoader():
         
     def get_pipeline(self, type='train', output='label_bbox', channels=1,
                      apply_aug=True, onehot=True, seed=None, scale=False,
-                     apply_tl_preprocess=False, model_type="resnet"):
+                     tl_preprocess=False, model_type="resnet"):
         '''
         Input:
             type:           Can be 'train', 'validation', or 'test'
@@ -207,6 +207,14 @@ class DataLoader():
             onehot:         Bool that determines whether to 
                             one hot encode the class labels
             seed:           Random seed number
+            scale:          Bool that determines whether to scale img pixel
+                            values to be between [-0.5, 0.5]. Only works if
+                            tl_preprocess is False
+            tl_preprocess:  Bool that determines whether to apply transfer
+                            learning preprocessing
+            model_type:     Model being used for transfer learning
+                            Can be 'resnet', 'mobilenet', or 'efn_b3'
+                            
         Output:
             image generator
         '''
@@ -220,20 +228,7 @@ class DataLoader():
         elif type == 'test':
             df = self.df_test
             
-# =============================================================================
-#         if type == 'test':
-#             paths = df['fname']
-#             paths_targets = tf.data.Dataset.from_tensor_slices(paths)
-#             paths_targets = paths_targets.shuffle(BUFFER_SIZE)
-#             img_targets = paths_targets.map(
-#                     partial(load_and_resize_image_test, channels=channels),
-#                     num_parallel_calls=AUTOTUNE)
-#             img_targets = img_targets.map(standard_scaler_test).repeat()
-#             ds = img_targets.batch(self.batch_size).prefetch(
-#                     buffer_size=AUTOTUNE)
-#             return ds
-#         else:
-# =============================================================================
+
         distinct_labels = df['label'].value_counts()
         #num_labels = len(distinct_labels) # risk of val and train not matching
         num_labels = len(self.labels)
@@ -250,31 +245,7 @@ class DataLoader():
                                     output=output,
                                     seed=seed)
             
-            imgs_targets = paths_targets.map(
-                partial(load_image, channels=channels),
-                num_parallel_calls=AUTOTUNE)
-                          
-            if apply_aug:
-                imgs_targets = imgs_targets.map(
-                        partial(augment_img, 
-                                augmenter=self.augmenter,
-                                output_type=output,
-                                onehot=onehot,
-                                num_labels=num_labels),
-                        num_parallel_calls=AUTOTUNE)
-            else:
-                imgs_targets = imgs_targets.map(
-                        partial(augment_img, 
-                                augmenter=self.resizer,
-                                output_type=output,
-                                onehot=onehot,
-                                num_labels=num_labels),
-                        num_parallel_calls=AUTOTUNE)
-                        
-            if not apply_tl_preprocess and scale:
-                imgs_targets = imgs_targets.map(standard_scaler, 
-                                                num_parallel_calls=AUTOTUNE)
-            datasets.append(imgs_targets)
+            datasets.append(paths_targets)
             
         num_labels = len(distinct_labels)
         sampling_weights = np.ones(num_labels)*(1./num_labels)
@@ -290,17 +261,43 @@ class DataLoader():
                 lambda x: get_random_choice(sampling_weights.tolist()))
         choice_dataset = choice_dataset.repeat()
 
-        ds = choose_from_datasets(datasets, choice_dataset)
+        paths_targets_allclass = choose_from_datasets(datasets, choice_dataset)
+        
+        imgs_targets = paths_targets_allclass.map(
+            partial(load_image, channels=channels),
+            num_parallel_calls=AUTOTUNE)
+                      
+        if apply_aug:
+            imgs_targets = imgs_targets.map(
+                    partial(augment_img, 
+                            augmenter=self.augmenter,
+                            output_type=output,
+                            onehot=onehot,
+                            num_labels=num_labels),
+                    num_parallel_calls=AUTOTUNE)
+        else:
+            imgs_targets = imgs_targets.map(
+                    partial(augment_img, 
+                            augmenter=self.resizer,
+                            output_type=output,
+                            onehot=onehot,
+                            num_labels=num_labels),
+                    num_parallel_calls=AUTOTUNE)
+                    
+        if not tl_preprocess and scale:
+            imgs_targets = imgs_targets.map(standard_scaler, 
+                                            num_parallel_calls=AUTOTUNE)
         
 # =============================================================================
+#         # tf 2.0 only
 #         ds = sample_from_datasets(datasets, 
 #                                   weights=sampling_weights, seed=seed)
 # =============================================================================
-        if apply_tl_preprocess:
-            ds = ds.map(partial(preprocess, 
-                                model_type=model_type),
-                        num_parallel_calls=AUTOTUNE)
-        ds = ds.batch(self.batch_size).prefetch(buffer_size=AUTOTUNE)
+        if tl_preprocess:
+            imgs_targets = imgs_targets.map(
+                    partial(preprocess, model_type=model_type),
+                    num_parallel_calls=AUTOTUNE)
+        ds = imgs_targets.batch(self.batch_size).prefetch(buffer_size=AUTOTUNE)
         
         return ds    
 

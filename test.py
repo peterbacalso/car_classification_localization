@@ -43,7 +43,7 @@ clear_session() # Clear models from previous sessions
 
 
 def load_data(output="label_bbox", batch_size=32, channels=1, 
-              apply_tl_preprocess=False, model_type="resnet", seed=23):
+              tl_preprocess=False, model_type="resnet", seed=23):
     
     data = DataLoader('./data/cars_train', 
                   './data/cars_test', 
@@ -57,7 +57,7 @@ def load_data(output="label_bbox", batch_size=32, channels=1,
                             output=output,
                             channels=channels,
                             apply_aug=False,
-                            apply_tl_preprocess=apply_tl_preprocess,
+                            tl_preprocess=tl_preprocess,
                             model_type=model_type,
                             seed=seed)
     steps = np.ceil(len(data.df_test)/data.batch_size)
@@ -198,7 +198,7 @@ if __name__=="__main__":
     labels, n_classes, gen, steps = \
     load_data(batch_size=32, 
               channels=3,
-              apply_tl_preprocess=True,
+              tl_preprocess=True,
               model_type="efn_b3")
     
     #tf.compat.v1.disable_eager_execution()

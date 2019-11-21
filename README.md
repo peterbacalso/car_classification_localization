@@ -1,11 +1,15 @@
 # Stanford Cars Dataset Image Classification and Localization
 
+TODO: Add image examples
+
 # Input Pipeline
 
 For preprocessing, making the data zero-centered would be computationally expensive to load all images and calculate the mean. Therefore we will just scale the pixels to be in range [-0.5,0.5] and use batch normalization between layers.
 When a transfer learning model is used for training, the corresponding `prerpocess_input` function is applied instead.
 
 There are only a few (~30-50) images per class so to combat overfitting, heavy augmentation was applied through the library [imgaug](https://imgaug.readthedocs.io/en/latest/). See [data_loader.py](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/data/data_loader.py) for implementation details.
+
+TODO: Add augmented image examples
 
 The data has a class imbalance so one way to handle this is through oversampling which is creating copies of our minority classes to match the majority ones. Fortunately we do not have to do this explicitly since we can get it for free by modifying the way we output images from the tf.data generator. Oversampling is achieved by splitting the data by their class labels and sampling from them uniformly. This preserves the underlying distribution of the minority classes but evens out the dataset without needing to collect more data!
 
@@ -94,7 +98,36 @@ Swapping the model to a pretrained one based on imagenet dramatically improved b
 
 ![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/finally_converging.png)
 
-As shown on the image, the blue line represents the transfer learning model and at epoch 5 it has already reached 65% label accuracy.
+As shown on the image above, the blue line represents the transfer learning model and at epoch 5 it has already reached 65% label accuracy.
+
+## Results
+
+The best results so far was achieved by EfficientNet-B3 with the following [hyperparameters](https://app.wandb.ai/peterbacalso/car_classification/runs/0p6yeqbq/overview) and using Focal Loss.
+
+
+Training vs validation metrics were close during model training so underfitting or overfitting did not occur
+Validation Loss: 
+
+![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/loss.png)
+
+Validation Labels Accuracy:
+
+![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/labels_acc.png)
+
+Validation Bounding Box Accuracy:
+
+![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/bbox_acc.png)
+
+
+Activation Heatmap
+
+![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/mclaren_heatmap.png)
+
+TODO: 
+- Add Confusion matrix (its big how to insert here)
+- Try Gradient Ascent (deep dream?)
+- Calculate IOU for bbox
+- Streamlit link??
 
 ## Dataset Citation
 

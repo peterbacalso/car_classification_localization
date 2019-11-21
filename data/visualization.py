@@ -11,6 +11,8 @@ pd.options.display.max_rows = 500
 pd.options.display.max_columns = 500
 pd.set_option('display.width', 1000)
 
+import time
+
 
 def get_assets(df, i):
     image = Image.open(df['fname'].iloc[i])
@@ -78,7 +80,7 @@ if __name__=="__main__":
 #                             #output='label',
 #                             onehot=True,
 #                             model_type="resnet",
-#                             apply_tl_preprocess=True,
+#                             tl_preprocess=True,
 #                             apply_aug=False,
 #                             scale=False,
 #                             channels=3,
@@ -96,9 +98,11 @@ if __name__=="__main__":
 # =============================================================================
     
 # =============================================================================
-#     for inputs, outputs in gen.take(1):
-#         print('inputs', inputs)
-#         print('outputs', outputs)
+#     start_time = time.time()
+#     for inputs, outputs in gen.take(5):
+#         pass
+#     end_time = time.time() - start_time
+#     print(f'{end_time}s')
 # =============================================================================
     
     # Comment out the standard scaler in data loader to use visualization code below
