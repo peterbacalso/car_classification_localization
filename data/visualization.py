@@ -62,7 +62,6 @@ if __name__=="__main__":
     df_train = data.df_train.merge(data.labels, 
                                    left_on='label', 
                                    right_index=True)
-    df_train = df_train.sort_index()
 
 # =============================================================================
 #     for i in range(df_train.shape[0]):
@@ -74,15 +73,17 @@ if __name__=="__main__":
 #     display_images(df_train, data.df_test, 20)
 # =============================================================================
     
-    gen = data.get_pipeline(type='train',
-                            #output='label',
-                            onehot=True,
-                            model_type="resnet",
-                            apply_tl_preprocess=True,
-                            apply_aug=False,
-                            scale=False,
-                            channels=3,
-                            seed=1)
+# =============================================================================
+#     gen = data.get_pipeline(type='train',
+#                             #output='label',
+#                             onehot=True,
+#                             model_type="resnet",
+#                             apply_tl_preprocess=True,
+#                             apply_aug=False,
+#                             scale=False,
+#                             channels=3,
+#                             seed=1)
+# =============================================================================
     
 # =============================================================================
 #     gen = data.get_pipeline(type='test',

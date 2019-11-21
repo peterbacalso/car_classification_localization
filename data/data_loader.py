@@ -19,6 +19,10 @@ from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
 
 tf.compat.v1.enable_eager_execution()
 
+pd.options.display.max_rows = 500
+pd.options.display.max_columns = 500
+pd.set_option('display.width', 1000)
+
 IMG_SIZE = 224
 BUFFER_SIZE = 100000
 
@@ -230,10 +234,10 @@ class DataLoader():
 #             return ds
 #         else:
 # =============================================================================
-        distinct_labels = df['label'].unique()
+        distinct_labels = df['label'].value_counts()
         #num_labels = len(distinct_labels) # risk of val and train not matching
         num_labels = len(self.labels)
-        for car_type in distinct_labels:
+        for car_type in distinct_labels.index:
             cars = df[df['label']==car_type]
             
             paths = cars['fname']
@@ -272,20 +276,26 @@ class DataLoader():
                                                 num_parallel_calls=AUTOTUNE)
             datasets.append(imgs_targets)
             
-        num_labels = len(df['label'].unique())
+        num_labels = len(distinct_labels)
         sampling_weights = np.ones(num_labels)*(1./num_labels)
         
 # =============================================================================
-#         choice_dataset = tf.data.Dataset.from_tensors([0])
-#         choice_dataset = choice_dataset.map(
-#                 lambda x: get_random_choice(sampling_weights.tolist()))
-#         choice_dataset = choice_dataset.repeat()
-# 
-#         ds = choose_from_datasets(datasets, choice_dataset)
+#         total_labels = np.sum(distinct_labels)
+#         num_labels = len(distinct_labels)
+#         sampling_weights = total_labels/num_labels*1/distinct_labels
 # =============================================================================
         
-        ds = sample_from_datasets(datasets, 
-                                  weights=sampling_weights, seed=seed)
+        choice_dataset = tf.data.Dataset.from_tensors([0])
+        choice_dataset = choice_dataset.map(
+                lambda x: get_random_choice(sampling_weights.tolist()))
+        choice_dataset = choice_dataset.repeat()
+
+        ds = choose_from_datasets(datasets, choice_dataset)
+        
+# =============================================================================
+#         ds = sample_from_datasets(datasets, 
+#                                   weights=sampling_weights, seed=seed)
+# =============================================================================
         if apply_tl_preprocess:
             ds = ds.map(partial(preprocess, 
                                 model_type=model_type),

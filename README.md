@@ -3,16 +3,9 @@
 # Input Pipeline
 
 For preprocessing, making the data zero-centered would be computationally expensive to load all images and calculate the mean. Therefore we will just scale the pixels to be in range [-0.5,0.5] and use batch normalization between layers.
+When a transfer learning model is used for training, the corresponding `prerpocess_input` function is applied instead.
 
-To augment the image dataset, the library [imgaug](https://imgaug.readthedocs.io/en/latest/) provides a wide range of augmentation techniques of which the following are used:
-
-* Flip Left and Right
-* Crop 0-10% off the image
-* Apply GaussianBlur to 50% of the images
-* Adjust the contrast
-* Adjust the brightness
-* Scale/zoom and translate/move images
-* Add per pixel noise on a randomly chosen channel
+There are only a few (~30-50) images per class so to combat overfitting, heavy augmentation was applied through the library [imgaug](https://imgaug.readthedocs.io/en/latest/). See [data_loader.py](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/data/data_loader.py) for implementation details.
 
 The data has a class imbalance so one way to handle this is through oversampling which is creating copies of our minority classes to match the majority ones. Fortunately we do not have to do this explicitly since we can get it for free by modifying the way we output images from the tf.data generator. Oversampling is achieved by splitting the data by their class labels and sampling from them uniformly. This preserves the underlying distribution of the minority classes but evens out the dataset without needing to collect more data!
 
@@ -22,9 +15,9 @@ The following is the imbalanced distribution of classes
 
 ![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/class_imbalance.png)
 
-The following is an example of the distribution after oversampling. The generator was tested for 300 iterations @ 32 batch size each
+The following is an example of the distribution after oversampling. The generator was tested for 10000 iterations @ 32 batch size each
 
-![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/oversampled.png)
+![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/oversampled_320000.png)
 
 ## Sanity Checks
 
@@ -45,8 +38,33 @@ The same process was repeated for a subset of the dataset using 2 labels. The lo
 3/3
  [==============================] - 1s 322ms/step - loss: 2.9040 - accuracy: 0.4375 - val_loss: 2.9195 - val_accuracy: 0.6875
 ```
-## Mode
-l Architecture
+## Model Architectures
+
+### Custom Model
+
+Traditional:
+
+1. Conv(64 filters, 5x5 kernel, 2 strides)|BatchNorm|Relu|MaxPool(2 pool size)
+2. [Conv(128 filters, 3x3 kernel, 1 strides)|BatchNorm|Relu]*2|MaxPool(2 pool size)
+3. [Conv(256 filters, 3x3 kernel, 1 strides)|BatchNorm|Relu]*2|MaxPool(2 pool size)
+4. [Drop|Dense(512 units)|BatchNorm|Relu]*2
+5. a.) Drop|Dense (196 units)
+5. b.) Drop|Dense (4 units)
+
+Residual:
+
+1. Conv(64 filters, 3x3 kernel, 2 strides)|BatchNorm|Relu
+2. [Conv(64 filters, 3x3 kernel, 1 strides)|BatchNorm|Relu]*2|MaxPool(2 pool size)
+3. Residual(64 filters)*3|Residual(128 filters)*4|Residual(256 filters)*4|Residual(512 filters)*3
+4. GlobalAvgPool2D|[Drop|Dense(512 units)|BatchNorm|Relu]*2
+5. a.) Drop|Dense (196 units)
+5. b.) Drop|Dense (4 units)
+
+### Transfer Learning
+
+- ResNet50
+- MobileNetV2
+- EfficientNet-B3
 
 ## Training Process
 
@@ -63,6 +81,20 @@ Epoch 200/200
 ```
 2. Train using full dataset, start with small regularization and find the learning rate that makes the loss go down. The model is able to overfit with train accuracy of 1 implying that it has enough capacity to learn the image features.
 
+![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/all_class_adam_2.png)
+
+3. Now that we know the model can overfit, we can increase regularization and tune hyperparameters.
+
+Wandb was used for logging all experiments on the full dataset:
+
+- [Training Experiments](https://app.wandb.ai/peterbacalso/car_classification?workspace=user-peterbacalso)
+
+Initially custom models were used for training but these proved to be difficult for finding a good solution. Each experiment was time consuming since the validation loss would converge slowly and the best validation accuracy it achieved was only at 50%.
+Swapping the model to a pretrained one based on imagenet dramatically improved both the results and the time it took to reach a decent accuracy.
+
+![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/finally_converging.png)
+
+As shown on the image, the blue line represents the transfer learning model and at epoch 5 it has already reached 65% label accuracy.
 
 ## Dataset Citation
 

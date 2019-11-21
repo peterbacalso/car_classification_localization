@@ -4,6 +4,7 @@ data/devkit/*
 logs/*
 checkpoints/*
 data/data_loader_v2.py
+data/ipython.html
 wandb/*
 old_checkpoints/*
 opt_progress/*

@@ -114,6 +114,13 @@ def create_confusion_matrix(gen, model, classes, batch_size, steps, n_classes):
     y_preds_top1 = np.argmax(y_preds, axis=1)
     y_true_top1 = np.argmax(y_true, axis=1)
     
+    
+# =============================================================================
+#     y_true = pd.Series(true_data, name="Actual")
+#     y_pred = pd.Series(pred_data, name="Predicted")
+#     df_confusion = pd.crosstab(y_true, y_pred)
+# =============================================================================
+    
     cm = plot_confusion_matrix(y_true_top1, y_preds_top1, 
                           classes, title="Cars Classification")
     
