@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from PIL import Image
 import scipy as sp
-
+import tensorflow as tf
 from vis.utils import utils
 import efficientnet.tfkeras as efn
 from efficientnet.tfkeras import preprocess_input as preproc_efn
@@ -13,35 +13,6 @@ from tensorflow.keras.models import Model
 import sys, os; 
 sys.path.insert(0, os.path.abspath('..'));
 from loss_functions.focal_loss import focal_loss
-
-def plot_activation(model, img, labels):
-   
-    pred = model.predict(img[np.newaxis,:,:,:])[0]
-    pred_class = np.argmax(pred)
-
-    weights = model.layers[-2].get_weights()[0]
-    class_weights = weights[:, pred_class]
-
-    intermediate = Model(model.input,
-                         model.get_layer("top_conv").output)
-    conv_output = intermediate.predict(img[np.newaxis,:,:,:])
-    conv_output = np.squeeze(conv_output)
-
-    h = int(img.shape[0]/conv_output.shape[0])
-    w = int(img.shape[1]/conv_output.shape[1])
-
-    act_maps = sp.ndimage.zoom(conv_output, (h, w, 1), order=1)
-
-    out = np.dot(act_maps.reshape((img.shape[0]*img.shape[1],-1)), 
-                 class_weights).reshape(img.shape[0],img.shape[1])
-
-    img = img.astype('float32').reshape(img.shape[0], img.shape[1],3)
-    
-    #return img, out, labels[pred_class]
-    plt.imshow(img)
-    plt.imshow(out, cmap='jet', alpha=0.35)
-    plt.title(labels[pred_class])
-    st.pyplot()
 
 #@st.cache(allow_output_mutation=True)
 def load_cnn():
@@ -69,9 +40,37 @@ def load_labels():
     df_labels = pd.read_csv('../data_tables/labels.csv')
     return df_labels
 
-def main():
-    #model = load_cnn()
+
+def plot_activation(model, img, labels):
+   
+    pred = model.predict(img[np.newaxis,:,:,:], steps=1)[0]
+    pred_class = np.argmax(pred)
+
+    weights = model.layers[-2].get_weights()[0]
+    class_weights = weights[:, pred_class]
+
+    intermediate = Model(model.input,
+                         model.get_layer("top_conv").output)
+    conv_output = intermediate.predict(img[np.newaxis,:,:,:], steps=1)
+    conv_output = np.squeeze(conv_output)
+
+    h = int(img.shape[0]/conv_output.shape[0])
+    w = int(img.shape[1]/conv_output.shape[1])
+
+    act_maps = sp.ndimage.zoom(conv_output, (h, w, 1), order=1)
+
+    out = np.dot(act_maps.reshape((img.shape[0]*img.shape[1],-1)), 
+                 class_weights).reshape(img.shape[0],img.shape[1])
+
+    img = img.astype('float32').reshape(img.shape[0], img.shape[1],3)
     
+    #return img, out, labels[pred_class]
+    plt.imshow(img)
+    plt.imshow(out, cmap='jet', alpha=0.35)
+    plt.title(labels[pred_class])
+    st.pyplot()
+
+def main():    
     df_train = load_train()
     df_test = load_test()
     df_labels = load_labels()
@@ -145,15 +144,20 @@ def main():
         precision_recall = precision_recall[precision_recall['Precision']<=p_tresh]
         precision_recall[precision_recall['Recall']<=r_tresh]
         
+        if len(labels) and st.sidebar.checkbox("View Saliency Map"):
+            model = load_cnn()
+            for i in range(len(df_test[labels_filter]['fname'])):
+                filepath = df_test[labels_filter]['fname'].values[i]
+                image = utils.load_img(f'../data/{filepath}', 
+                          target_size=(224, 224))
 # =============================================================================
-#         if len(labels) and st.sidebar.checkbox("View Saliency Map"):
-#             for i in range(len(df_test[labels_filter]['fname'])):
-#                 filepath = df_test[labels_filter]['fname'].values[i]
-#                 image = utils.load_img(f'../data/{filepath}', 
-#                           target_size=(224, 224))
-#                 image = preproc_efn(image)
-#                 plot_activation(model, image, df_labels['labels'])
+#                 image = tf.io.read_file(f'../data/{filepath}')
+#                 image = tf.image.decode_jpeg(image, channels=3)
+#                 image = tf.image.resize(image, (224, 224))
+#                 image = tf.numpy_function(preproc_efn, [image], tf.float32)
 # =============================================================================
+                image = preproc_efn(image)
+                plot_activation(model, image, df_labels['labels'])
 
 if __name__ == "__main__":
     main()
