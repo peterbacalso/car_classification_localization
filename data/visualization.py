@@ -138,7 +138,7 @@ if __name__=="__main__":
             plt.subplot(4,4,i+1)
             plt.imshow(image, aspect='auto')
             plt.axis('off')
-            plt.title(title, fontsize=12)
+            plt.title(title, fontsize=10)
             plt.gca().add_patch(rect)
             
         plt.show()
