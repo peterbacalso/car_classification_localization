@@ -59,7 +59,7 @@ def display_images(df_train, df_test, n):
     plt.show()
     
 if __name__=="__main__":
-    data = DataLoader(batch_size=8)
+    data = DataLoader(batch_size=16)
 
     df_train = data.df_train.merge(data.labels, 
                                    left_on='label', 
@@ -109,10 +109,10 @@ if __name__=="__main__":
     channels=3
     
     train_gen = data.get_pipeline(type='train',
-                                  apply_aug=False,
+                                  apply_aug=True,
                                   channels=channels)
     for inputs, outputs in train_gen.take(1):
-        plt.figure(figsize=(14, 7))
+        plt.figure(figsize=(20, 20))
         for i in range(inputs.numpy().shape[0]):
             
             index = np.argmax(outputs['labels'][i].numpy())
@@ -135,7 +135,7 @@ if __name__=="__main__":
             rect = Rectangle(xy, width, height, 
                              fill=False, color='r', linewidth=2)
             
-            plt.subplot(2,4,i+1)
+            plt.subplot(4,4,i+1)
             plt.imshow(image, aspect='auto')
             plt.axis('off')
             plt.title(title, fontsize=12)
