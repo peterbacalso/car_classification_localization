@@ -113,7 +113,6 @@ As shown on the image above, the blue line represents the transfer learning mode
 The best results so far was achieved by EfficientNet-B3 with the following [hyperparameters](https://app.wandb.ai/peterbacalso/car_classification/runs/0p6yeqbq/overview) and using Focal Loss which decreases the loss contribution of easy examples so the model can focus on harder images.
 
 Training vs validation metrics were close during model training so underfitting or overfitting did not occur
-Loss
 
 ![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/loss.png)
 
