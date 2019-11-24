@@ -140,7 +140,7 @@ Test Set Classification Evaluations
 - [Precision, Recall](https://github.com/peterbacalso/CarsClassificationWithLocalization/blob/master/data_tables/precision_recall.csv)
 - [Confusion Matrix](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/confusion_matrix.png)
 
-Sample Test Predictions
+Sample Test Predictions (True Bounding Box: Blue, Predicted Bounding Box: Red)
 
 ![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/test_preds.png)
 
