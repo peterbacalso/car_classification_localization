@@ -1,15 +1,3 @@
-data/cars_test/*
-data/cars_train/*
-data/devkit/*
-logs/*
-checkpoints/*
-data/data_loader_v2.py
-data/ipython.html
-wandb/*
-old_checkpoints/*
-opt_progress/*
-
-
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -67,6 +55,19 @@ coverage.xml
 # Translations
 *.mo
 *.pot
+
+# Custom
+data/cars_test/*
+data/cars_train/*
+data/devkit/*
+logs/*
+checkpoints/*
+data/data_loader_v2.py
+data/ipython.html
+wandb/*
+old_checkpoints/*
+opt_progress/*
+hidden_assets/*
 
 # Django stuff:
 *.log

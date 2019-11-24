@@ -23,6 +23,14 @@ The following is an example of the distribution after oversampling. The generato
 
 ![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/oversampled_320000.png)
 
+## Streamlit
+
+To see an interactive exploration of the data, run the following command
+
+```
+streamlit run streamlit/streamlit.py
+```
+
 ## Sanity Checks
 
 This step was done to help monitor training and adjust hyperparameters to get good learning results.
@@ -100,40 +108,47 @@ Swapping the model to a pretrained one based on imagenet dramatically improved b
 
 As shown on the image above, the blue line represents the transfer learning model and at epoch 5 it has already reached 65% label accuracy.
 
-TODO: try siames networks
-
 ## Results
 
-The best results so far was achieved by EfficientNet-B3 with the following [hyperparameters](https://app.wandb.ai/peterbacalso/car_classification/runs/0p6yeqbq/overview) and using Focal Loss.
-
-TODO: short Focal Loss explanation
+The best results so far was achieved by EfficientNet-B3 with the following [hyperparameters](https://app.wandb.ai/peterbacalso/car_classification/runs/0p6yeqbq/overview) and using Focal Loss which decreases the loss contribution of easy examples so the model can focus on harder images.
 
 Training vs validation metrics were close during model training so underfitting or overfitting did not occur
-Validation Loss: 
+Loss
 
 ![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/loss.png)
 
-Validation Labels Accuracy:
+Labels Accuracy
 
 ![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/labels_acc.png)
 
-Validation Bounding Box Accuracy:
+Bounding Box Accuracy
 
 ![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/bbox_acc.png)
 
-
-Activation Heatmap
+Sample Activation Heatmap
 
 ![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/mclaren_heatmap.png)
 
-TODO: 
-- Hyperas Training
-- Add Confusion matrix (its big how to insert here)
-- Try Gradient Ascent (deep dream?)
-- Calculate IOU for bbox
-- Streamlit link??
+Test Set Results
+
+- Test Labels Accuracy: 0.901342
+- Test Bounding Box Accuracy: 0.7349652
+- Test Loss: 0.3240524888868123
+
+Test Set Classification Evaluations
+
+- [Precision, Recall](https://github.com/peterbacalso/CarsClassificationWithLocalization/blob/master/data_tables/precision_recall.csv)
+- [Confusion Matrix](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/confusion_matrix.png)
+
+Sample Test Predictions
+
+![](https://github.com/peterbacalso/Cars_Image_Classification_Localization/blob/master/assets/test_preds.png)
 
 ## Challenges
+
+- Having a large number of classes but only a few (~30) images per class made it very difficult to train a custom model. To combat this, augmentation served as a means to artifically inflate the amount of images. The most effective method however, was to use transfer learning with a model already pre-trained on cars. Other potential methods I could try would be to gather more data either manually (e.g. scraping/api's) or generating it synthetically (e.g. GANs). Another option that could work effectively without needing to gather more data is to try few-show learning.
+
+- Another minor challenge of trying a dual headed model was finding a good loss weighting balance and the right metrics between classification and localization. In the current setup, I decided to use mean squared log error for the bounding box loss function in order to minimize its effect on the overall loss. The downside to this is that MSLE is biased to penalizing underestimates more than overestimates. One option to counter this is to scale the range of bounding box input to [0,1] and use MSE loss function with IoU(Intersection over Union) as a metric.
 
 ## Dataset Citation
 

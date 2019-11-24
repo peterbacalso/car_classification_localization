@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import scipy as sp
 import tensorflow as tf
-from vis.utils import utils
 import efficientnet.tfkeras as efn
 from efficientnet.tfkeras import preprocess_input as preproc_efn
 from tensorflow.keras.models import load_model
@@ -144,20 +143,17 @@ def main():
         precision_recall = precision_recall[precision_recall['Precision']<=p_tresh]
         precision_recall[precision_recall['Recall']<=r_tresh]
         
-        if len(labels) and st.sidebar.checkbox("View Saliency Map"):
-            model = load_cnn()
-            for i in range(len(df_test[labels_filter]['fname'])):
-                filepath = df_test[labels_filter]['fname'].values[i]
-                image = utils.load_img(f'../data/{filepath}', 
-                          target_size=(224, 224))
 # =============================================================================
-#                 image = tf.io.read_file(f'../data/{filepath}')
-#                 image = tf.image.decode_jpeg(image, channels=3)
-#                 image = tf.image.resize(image, (224, 224))
-#                 image = tf.numpy_function(preproc_efn, [image], tf.float32)
+#         if len(labels) and st.sidebar.checkbox("View Saliency Map"):
+#             model = load_cnn()
+#             for i in range(len(df_test[labels_filter]['fname'])):
+#                 filepath = df_test[labels_filter]['fname'].values[i]
+#                 img = tf.keras.preprocessing\
+#                 .image.load_img(f'../data/{filepath}', target_size=(224, 224))
+#                 img = np.array(img)
+#                 img = preproc_efn(img)
+#                 plot_activation(model, img, df_labels['labels'])
 # =============================================================================
-                image = preproc_efn(image)
-                plot_activation(model, image, df_labels['labels'])
 
 if __name__ == "__main__":
     main()
